@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { ArrowDownToLine, ArrowUpRight, Plus, ShieldCheck } from 'lucide-react';
 import { useWallet } from '../lib/Wallet';
 import { useProtocol } from '../lib/Protocol';
-import { errorMessage, loadMarkets, money, stateLabel } from '../lib/chain';
+import { errorMessage, money, stateLabel } from '../lib/chain';
 import type { Market } from '../lib/chain';
+import { apiWalletSummary } from '../lib/api';
 import { EmptyState, StatusBanner, timeRemaining, useTransaction } from '../components/Common';
 
 export default function CreatorPage() {
@@ -20,13 +21,9 @@ export default function CreatorPage() {
     if (!wallet.account || !protocol) return;
     setLoading(true);
     try {
-      const count = Number(await protocol.factory.marketCount());
-      const all: Market[] = [];
-      for (let offset = 0; offset < count; offset += 24) all.push(...(await loadMarkets(protocol, offset)).markets);
-      const mine = all.filter(m => m.creator.toLowerCase() === wallet.account.toLowerCase());
-      const fees: Record<string, bigint> = {};
-      for (const m of mine) fees[m.address] = await protocol.fees.earnedByMarket(m.address);
-      setClaimable(await protocol.fees.claimable(wallet.account)); setMarkets(mine); setEarned(fees);
+      const summary = await apiWalletSummary(wallet.account);
+      const mine = summary.marketsCreated;
+      setClaimable(summary.claimableCreatorFees); setMarkets(mine); setEarned(summary.earnedByMarket);
     } catch (e) { setError(errorMessage(e)); } finally { setLoading(false); }
   }, [wallet.account, protocol]);
   useEffect(() => { void refresh(); }, [refresh]);

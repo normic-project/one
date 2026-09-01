@@ -2,7 +2,7 @@
 
 One Shot is a fully collateralized, permissionless YES/NO event-market protocol for Robinhood Chain mainnet (chain ID 4663). Anyone can create an arbitrary objectively resolvable question. Traders take YES or NO positions with real USDG through exact-price matched orders.
 
-Nothing has been deployed. Independent security and legal review have not been completed. Tests are not a substitute for those reviews.
+The production contracts are deployed on Robinhood Chain mainnet from block 51943083. The repository pins the live factory, implementation, order book, fee vault, USDG, treasury, and Resolver Safe addresses.
 
 ## Core architecture
 
@@ -50,6 +50,12 @@ npm run deploy -- --broadcast
 ```
 
 There is no testnet, skip-checks, force, or private-key argument. Do not put secrets in `VITE_*` variables.
+
+## Production data layer
+
+Supabase stores a replayable, read-only index of canonical contract events. The schema and reorg-safe derived-state procedures live in `supabase/migrations`. A Supabase Edge Function reads Robinhood Chain in bounded batches, starts at block 51943083, waits 32 confirmations, and is scheduled every minute with `pg_cron` and `pg_net`. Run it locally with `npm run indexer:once`, `npm run indexer:backfill`, or `npm run indexer:reindex` using server-only credentials.
+
+Vercel functions under `api/` expose paginated market, trade, price, order, search, and wallet endpoints. Indexed history comes from Postgres. Financially relevant current state, including collateral, executable order amounts, wallet shares, outcomes, and creator claims, is refreshed from the canonical live contracts by the server. The browser never receives the managed RPC, service-role key, deployer keystore, or signing credentials.
 
 ## Risks
 

@@ -9,6 +9,7 @@
 /reports/
 /test-results/
 /playwright-report/
+/supabase/.temp/
 /.audit-verify-tmp-*/
 /deployments/*.json
 !deployments/.gitkeep

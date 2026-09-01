@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { ArrowRight, ArrowUpRight, BarChart3, ChevronDown, CircleHelp, Compass, Layers3, Plus, Search, ShieldCheck, Sparkles, TrendingUp, X } from 'lucide-react';
 import { WalletButton } from './lib/Wallet';
@@ -29,16 +29,21 @@ export default function App() {
 }
 
 function Home() {
-  const { markets, total, loading, configured, loadMore } = useProtocol();
+  const { markets, categories: availableCategories, total, loading, configured, loadMore, queryMarkets } = useProtocol();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('Trending');
   const [status, setStatus] = useState('All markets');
   const [category, setCategory] = useState('All categories');
-  const categories = ['All categories', ...Array.from(new Set(markets.map(m => m.category)))];
-  const filtered = markets.filter(m => m.question.toLowerCase().includes(query.toLowerCase()) &&
-    (status === 'All markets' || (status === 'Resolved' ? m.resolved : !m.resolved)) &&
-    (category === 'All categories' || m.category === category))
-    .sort((a, b) => filter === 'Trending' ? Number(b.volume - a.volume) : filter === 'Closing soon' ? a.closesAt - b.closesAt : 0);
+  const categories = ['All categories', ...availableCategories];
+  useEffect(() => {
+    const timer = window.setTimeout(() => void queryMarkets({
+      sort: filter === 'Newest' ? 'newest' : filter === 'Closing soon' ? 'closing' : 'trending',
+      ...(query.trim() ? { search: query.trim() } : {}),
+      ...(category !== 'All categories' ? { category } : {}),
+      ...(status === 'Resolved' ? { status: 'resolved' } : status === 'Open / pending' ? { status: 'open' } : {})
+    }), 250);
+    return () => window.clearTimeout(timer);
+  }, [filter, status, category, query, queryMarkets]);
   return <><section className="hero"><div className="hero-copy"><div className="hero-tag"><span className="tiny-dot" />BUILT ON ROBINHOOD CHAIN <ArrowUpRight size={13} /></div>
     <h1>A market for<br />your <span>conviction.</span></h1><p>See what’s next. Take a position.<br />Trade real outcomes, with real skin in the game.</p>
     <div className="hero-buttons"><a className="button primary" href="#markets">Explore markets <ArrowRight size={16} /></a><Link className="button ghost" to="/create">Create a market <Plus size={16} /></Link></div>
@@ -55,7 +60,7 @@ function Home() {
       <div className="strip-note"><Sparkles size={17} /><span>Have a different view?<br /><Link to="/create">Make a market for it <ArrowUpRight size={13} /></Link></span></div></div>
     <section className="markets-section" id="markets"><div className="section-heading"><div><span className="eyebrow">FIND YOUR EDGE</span><h2>What happens next?</h2></div><label className="search"><Search size={17} /><input aria-label="Search markets" placeholder="Search markets" value={query} onChange={e => setQuery(e.target.value)} /><kbd>/</kbd></label></div>
       <div className="market-controls"><div className="tabs">{['Trending', 'Newest', 'Closing soon'].map(tab => <button className={filter === tab ? 'active' : ''} key={tab} onClick={() => setFilter(tab)}>{tab === 'Trending' && <TrendingUp size={15} />}{tab}</button>)}</div><div className="filter-group"><label className="select-wrap"><select aria-label="Market category" value={category} onChange={e => setCategory(e.target.value)}>{categories.map(value => <option key={value}>{value}</option>)}</select><ChevronDown size={14} /></label><label className="select-wrap"><select aria-label="Market status" value={status} onChange={e => setStatus(e.target.value)}><option>All markets</option><option>Open / pending</option><option>Resolved</option></select><ChevronDown size={14} /></label></div></div>
-      <StatusBanner />{loading && !markets.length ? <div className="skeleton-grid" aria-label="Loading markets">{[1, 2, 3].map(i => <div className="skeleton" key={i} />)}</div> : filtered.length ? <div className="market-grid">{filtered.map(m => <MarketCard key={m.address} market={m} />)}</div> :
+      <StatusBanner />{loading && !markets.length ? <div className="skeleton-grid" aria-label="Loading markets">{[1, 2, 3].map(i => <div className="skeleton" key={i} />)}</div> : markets.length ? <div className="market-grid">{markets.map(m => <MarketCard key={m.address} market={m} />)}</div> :
         <EmptyState title={query ? 'No markets match your search.' : 'The next market starts with you.'} action={<Link className="button secondary" to="/create">Create the first market <Plus size={15} /></Link>}>{query ? 'Try a different asset or clear your filters.' : 'No live markets to show yet. Every market starts with a question—and fills only when traders take both sides.'}</EmptyState>}
       {markets.length < total && <button className="button secondary load-more" disabled={loading} onClick={() => void loadMore()}>{loading ? 'Loading…' : 'Load more markets'}</button>}
       {markets.length > 0 && <p className="muted small">Showing {markets.length} of {total} markets. Sorting applies to loaded markets. Prices reflect the last matched trade, not a guaranteed executable quote.</p>}

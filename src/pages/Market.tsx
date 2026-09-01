@@ -5,8 +5,9 @@ import { ArrowLeft, ArrowUpRight, Clock3, ShieldCheck } from 'lucide-react';
 import { useProtocol } from '../lib/Protocol';
 import { useWallet } from '../lib/Wallet';
 import { compatible, errorMessage, eventMarketContract, loadMarket, loadOrders, loadTrades,
-  marketContract, money, outcomeLabel, provider, short, stateLabel } from '../lib/chain';
+  marketContract, money, outcomeLabel, short, stateLabel } from '../lib/chain';
 import type { Market, Order, Trade } from '../lib/chain';
+import { apiWalletPositions } from '../lib/api';
 import { CHAIN_ID, EXPLORER, TOKEN_ABI, USDG } from '../lib/config';
 import { EmptyState, StatusBanner, timeRemaining, useTransaction } from '../components/Common';
 
@@ -36,11 +37,15 @@ export default function MarketPage() {
   const refresh = useCallback(async () => {
     if (!protocol) return;
     try {
-      if (!isAddress(address) || !await protocol.factory.isMarket(address)) throw new Error('This is not a market registered with the configured protocol.');
-      const [m, o, t, block] = await Promise.all([loadMarket(address), loadOrders(protocol, address),
-        loadTrades(protocol, address), provider.getBlock('latest')]);
-      setMarket(m); setOrders(o); setTrades(t); setNow(block ? block.timestamp * 1000 : Date.now()); setError('');
-      if (wallet.account) setBalances(await Promise.all([marketContract(address).sharesOf(wallet.account, true), marketContract(address).sharesOf(wallet.account, false)]) as [bigint, bigint]);
+      if (!isAddress(address)) throw new Error('This is not a valid market address.');
+      const [m, o, t] = await Promise.all([loadMarket(address), loadOrders(protocol, address), loadTrades(protocol, address)]);
+      setMarket(m); setOrders(o); setTrades(t); setNow((m.chainTimestamp || Math.floor(Date.now()/1000))*1000); setError('');
+      if (wallet.account) {
+        const positions = await apiWalletPositions(wallet.account);
+        const matching = positions.filter(position => position.market.address.toLowerCase() === address.toLowerCase());
+        setBalances([matching.find(position => position.yes)?.available || 0n,
+          matching.find(position => !position.yes)?.available || 0n]);
+      }
       else setBalances([0n, 0n]);
     } catch (e) { setError(errorMessage(e)); }
   }, [address, protocol, wallet.account]);
