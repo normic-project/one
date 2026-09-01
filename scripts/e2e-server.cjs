@@ -122,6 +122,11 @@ async function main() {
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     response.setHeader('Content-Type', 'application/json');
     if (request.method === 'OPTIONS') { response.writeHead(204); response.end(); return; }
+    if (request.method === 'POST' && request.url === '/__shutdown') {
+      response.writeHead(204);
+      response.end(() => void close());
+      return;
+    }
     if (request.url === '/fixture') {
       response.end(JSON.stringify({ account: signers[3].address, creator: signers[2].address, market: open.target,
         automatic, proposalReadyDesktop: proposalReadyDesktop.target, proposalReadyMobile: proposalReadyMobile.target,
@@ -154,7 +159,14 @@ async function main() {
     await vite.listen();
   }
   console.log('Isolated general-market browser fixture ready on 127.0.0.1:5174.');
-  async function close() { await vite.close(); server.close(); process.exit(0); }
+  let closing = false;
+  async function close() {
+    if (closing) return;
+    closing = true;
+    await vite.close();
+    await new Promise(resolve => server.close(resolve));
+    process.exit(0);
+  }
   process.on('SIGTERM', close); process.on('SIGINT', close);
 }
 main().catch(error => { console.error(error.message); process.exit(1); });
