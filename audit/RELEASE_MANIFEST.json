@@ -9,7 +9,7 @@
     "frozenProductionContractSource": "sha256:6e85cda2cfac7c8a5c5d9814985d567f674bba54967593b0c270c02e49e29810",
     "preAuditValidatedRelease": "sha256:e3f84c1448f78850c4ad5d3841148f359f46de4e6d959d9748b03fb5b1352d8c",
     "packageJson": "sha256:4dc3c05687a4b676fa9c0dda4023e15de27846e2b686b2112480f6f2aba56c11",
-    "packageLock": "sha256:c369805535d8f9fb787621a5cef59737209401b388a865189db48ae1db20b469",
+    "packageLock": "sha256:d834fda3a3affc90a054cadc49b022e12aab6d417e7d93f2676ed5467c4ee0ee",
     "hardhatConfig": "sha256:645a22011a79775e3d1f16cb1e45236d3d0d3408eba33ead5d6814b9f9bbcf38"
   },
   "compiler": {
