@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {CollateralVault} from "./CollateralVault.sol";
-import {IResolutionModule} from "./interfaces/IResolutionModule.sol";
+import {IMarketTypes} from "./interfaces/IMarketTypes.sol";
 
 /// @notice The trading, collateral and redemption engine shared by every market type.
 /// Shares are deliberately nontransferable outside the protocol order book.
@@ -30,15 +30,14 @@ abstract contract PredictionMarket is ReentrancyGuard {
 
     IERC20 public immutable token;
     address public creator;
-    IResolutionModule.MarketType public marketType;
     uint64 public closesAt;
     address public immutable settlement;
     uint64 public resolvesAt;
     CollateralVault public collateralVault;
 
-    IResolutionModule.Metadata private _metadata;
-    IResolutionModule.MarketState internal _state;
-    IResolutionModule.Outcome public resolvedOutcome;
+    IMarketTypes.Metadata private _metadata;
+    IMarketTypes.MarketState internal _state;
+    IMarketTypes.Outcome public resolvedOutcome;
 
     bytes32 public metadataHash;
 
@@ -68,7 +67,7 @@ abstract contract PredictionMarket is ReentrancyGuard {
         bytes32 secondarySourceHash,
         bytes32 resolutionTimestampHash
     );
-    event Resolved(IResolutionModule.Outcome indexed outcome);
+    event Resolved(IMarketTypes.Outcome indexed outcome);
     event Redeemed(address indexed account, bool indexed yes, uint256 shares, uint256 payout);
 
     constructor(IERC20 token_, address settlement_) {
@@ -86,10 +85,9 @@ abstract contract PredictionMarket is ReentrancyGuard {
 
     function _initializePredictionMarket(
         address creator_,
-        IResolutionModule.MarketType marketType_,
         uint64 closesAt_,
         uint64 resolvesAt_,
-        IResolutionModule.Metadata memory metadata_
+        IMarketTypes.Metadata memory metadata_
     ) internal {
         if (creator_ == address(0)) revert InvalidMetadata();
         if (closesAt_ <= block.timestamp + 60 || resolvesAt_ < closesAt_ || resolvesAt_ > block.timestamp + 365 days)
@@ -97,14 +95,13 @@ abstract contract PredictionMarket is ReentrancyGuard {
         _validateMetadata(metadata_);
 
         creator = creator_;
-        marketType = marketType_;
         closesAt = closesAt_;
         resolvesAt = resolvesAt_;
         _metadata = metadata_;
         collateralVault = new CollateralVault(token);
 
         (MetadataHashes memory hashes, bytes32 commitment) =
-            _metadataCommitment(metadata_, closesAt_, resolvesAt_, marketType_);
+            _metadataCommitment(metadata_, closesAt_, resolvesAt_);
         metadataHash = commitment;
         emit MetadataCommitted(commitment, hashes.question, hashes.rules, hashes.yesOutcome, hashes.noOutcome,
             hashes.primarySource, hashes.secondarySource, hashes.resolutionTimestamp);
@@ -115,7 +112,7 @@ abstract contract PredictionMarket is ReentrancyGuard {
         _;
     }
 
-    function metadata() external view returns (IResolutionModule.Metadata memory) { return _metadata; }
+    function metadata() external view returns (IMarketTypes.Metadata memory) { return _metadata; }
     function questionHash() external view returns (bytes32) { return keccak256(bytes(_metadata.question)); }
     function yesOutcomeHash() external view returns (bytes32) { return keccak256(bytes(_metadata.yesOutcome)); }
     function noOutcomeHash() external view returns (bytes32) { return keccak256(bytes(_metadata.noOutcome)); }
@@ -123,14 +120,14 @@ abstract contract PredictionMarket is ReentrancyGuard {
     function primarySourceHash() external view returns (bytes32) { return keccak256(bytes(_metadata.primarySource)); }
     function secondarySourceHash() external view returns (bytes32) { return keccak256(bytes(_metadata.secondarySource)); }
     function resolutionTimestampHash() external view returns (bytes32) { return keccak256(abi.encode(resolvesAt)); }
-    function resolved() public view returns (bool) { return resolvedOutcome != IResolutionModule.Outcome.NONE; }
-    function yesWins() external view returns (bool) { return resolvedOutcome == IResolutionModule.Outcome.YES; }
+    function resolved() public view returns (bool) { return resolvedOutcome != IMarketTypes.Outcome.NONE; }
+    function yesWins() external view returns (bool) { return resolvedOutcome == IMarketTypes.Outcome.YES; }
     function isTrading() public view returns (bool) {
-        return _state == IResolutionModule.MarketState.OPEN && !resolved() && block.timestamp < closesAt;
+        return _state == IMarketTypes.MarketState.OPEN && !resolved() && block.timestamp < closesAt;
     }
-    function marketState() public view returns (IResolutionModule.MarketState) {
-        if (_state == IResolutionModule.MarketState.OPEN && block.timestamp >= closesAt)
-            return IResolutionModule.MarketState.CLOSED;
+    function marketState() public view returns (IMarketTypes.MarketState) {
+        if (_state == IMarketTypes.MarketState.OPEN && block.timestamp >= closesAt)
+            return IMarketTypes.MarketState.CLOSED;
         return _state;
     }
 
@@ -164,34 +161,33 @@ abstract contract PredictionMarket is ReentrancyGuard {
     }
 
     function redeem(bool yes, uint256 amount) external nonReentrant {
-        IResolutionModule.Outcome finalOutcome = resolvedOutcome;
-        if (finalOutcome == IResolutionModule.Outcome.NONE) revert NotReady();
+        IMarketTypes.Outcome finalOutcome = resolvedOutcome;
+        if (finalOutcome == IMarketTypes.Outcome.NONE) revert NotReady();
         if (amount == 0) revert InvalidAmount();
         sharesOf[msg.sender][yes] -= amount;
         totalShares[yes] -= amount;
         uint256 payout;
-        if (finalOutcome == IResolutionModule.Outcome.INVALID) payout = amount * INVALID_PAYOUT;
-        else if ((yes && finalOutcome == IResolutionModule.Outcome.YES) || (!yes && finalOutcome == IResolutionModule.Outcome.NO))
+        if (finalOutcome == IMarketTypes.Outcome.INVALID) payout = amount * INVALID_PAYOUT;
+        else if ((yes && finalOutcome == IMarketTypes.Outcome.YES) || (!yes && finalOutcome == IMarketTypes.Outcome.NO))
             payout = amount * USDG_UNIT;
         if (payout != 0) collateralVault.release(msg.sender, payout);
         emit Redeemed(msg.sender, yes, amount, payout);
     }
 
-    function _resolve(IResolutionModule.Outcome outcome_) internal {
+    function _resolve(IMarketTypes.Outcome outcome_) internal {
         if (resolved()) revert AlreadyResolved();
-        if (outcome_ == IResolutionModule.Outcome.NONE) revert InvalidAmount();
+        if (outcome_ == IMarketTypes.Outcome.NONE) revert InvalidAmount();
         resolvedOutcome = outcome_;
-        if (outcome_ == IResolutionModule.Outcome.YES) _state = IResolutionModule.MarketState.RESOLVED_YES;
-        else if (outcome_ == IResolutionModule.Outcome.NO) _state = IResolutionModule.MarketState.RESOLVED_NO;
-        else _state = IResolutionModule.MarketState.RESOLVED_INVALID;
+        if (outcome_ == IMarketTypes.Outcome.YES) _state = IMarketTypes.MarketState.RESOLVED_YES;
+        else if (outcome_ == IMarketTypes.Outcome.NO) _state = IMarketTypes.MarketState.RESOLVED_NO;
+        else _state = IMarketTypes.MarketState.RESOLVED_INVALID;
         emit Resolved(outcome_);
     }
 
     function _metadataCommitment(
-        IResolutionModule.Metadata memory metadata_,
+        IMarketTypes.Metadata memory metadata_,
         uint64 closesAt_,
-        uint64 resolvesAt_,
-        IResolutionModule.MarketType marketType_
+        uint64 resolvesAt_
     ) private pure returns (MetadataHashes memory hashes, bytes32 commitment) {
         hashes.question = keccak256(bytes(metadata_.question));
         hashes.yesOutcome = keccak256(bytes(metadata_.yesOutcome));
@@ -210,12 +206,11 @@ abstract contract PredictionMarket is ReentrancyGuard {
             hashes.secondarySource,
             keccak256(bytes(metadata_.metadataURI)),
             closesAt_,
-            resolvesAt_,
-            marketType_
+            resolvesAt_
         ));
     }
 
-    function _validateMetadata(IResolutionModule.Metadata memory m) private pure {
+    function _validateMetadata(IMarketTypes.Metadata memory m) private pure {
         uint256 questionLength = bytes(m.question).length;
         uint256 yesLength = bytes(m.yesOutcome).length;
         uint256 noLength = bytes(m.noOutcome).length;

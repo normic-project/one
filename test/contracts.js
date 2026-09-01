@@ -1,43 +1,32 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { loadFixture, time } = require('@nomicfoundation/hardhat-network-helpers');
-const { fixture, eventMetadata, deployMarketImplementations, UNIT, FEE, BOND, DISPUTE_PERIOD } = require('./helpers.cjs');
+const { fixture, eventMetadata, deployMarketImplementation, UNIT, FEE } = require('./helpers.cjs');
 
-describe('Factory, market types and immutable metadata', function () {
-  it('locks implementations and initializes each fixed-implementation clone exactly once', async () => {
+describe('Factory, clones and immutable metadata', function () {
+  it('locks the implementation and initializes each clone exactly once', async () => {
     const f = await loadFixture(fixture);
     const latest = await time.latest();
-    const terms = { threshold: 3000n * UNIT, closesAt: latest + 3600, resolvesAt: latest + 3700, condition: 0 };
-    await expect(f.autoMarketImplementation.initialize(f.creator.address, terms))
-      .to.be.revertedWithCustomError(f.autoMarketImplementation, 'AlreadyInitialized');
     await expect(f.market.initialize(f.creator.address, latest + 3600, latest + 3700, eventMetadata()))
       .to.be.revertedWithCustomError(f.market, 'AlreadyInitialized');
     const cloneCode = (await ethers.provider.getCode(f.market.target)).toLowerCase();
     expect((cloneCode.length - 2) / 2).to.equal(45);
     expect(cloneCode).to.include(f.eventMarketImplementation.target.toLowerCase().slice(2));
-    expect(await f.autoMarketImplementation.token()).to.equal(f.token.target);
-    expect(await f.autoMarketImplementation.settlement()).to.equal(f.book.target);
-    expect(await f.autoMarketImplementation.autoResolver()).to.equal(f.autoResolver.target);
     expect(await f.eventMarketImplementation.token()).to.equal(f.token.target);
     expect(await f.eventMarketImplementation.settlement()).to.equal(f.book.target);
     expect(await f.eventMarketImplementation.resolverMultisig()).to.equal(f.resolverSigner.address);
-    expect(await f.eventMarketImplementation.proposalBond()).to.equal(BOND);
-    expect(await f.eventMarketImplementation.disputePeriod()).to.equal(DISPUTE_PERIOD);
-    for (const name of ['setAutoMarketImplementation', 'setEventMarketImplementation', 'upgradeTo', 'upgradeToAndCall'])
+    for (const name of ['setEventMarketImplementation', 'upgradeTo', 'upgradeToAndCall'])
       expect(f.factory.interface.hasFunction(name)).to.equal(false);
   });
 
-  it('creates both market types and forwards every listing fee without liquidity', async () => {
+  it('creates general event markets and forwards every listing fee without liquidity', async () => {
     const f = await loadFixture(fixture);
     const treasuryBefore = await ethers.provider.getBalance(f.treasury);
-    const auto = await f.createAuto();
-    expect(await auto.market.marketType()).to.equal(0);
-    expect(await f.market.marketType()).to.equal(1);
+    await f.createEvent();
     expect(await ethers.provider.getBalance(f.treasury)).to.equal(treasuryBefore + FEE);
     expect(await ethers.provider.getBalance(f.factory)).to.equal(0);
     expect(await f.collateral.locked()).to.equal(0);
-    expect(await f.market.proposalEvidenceHash()).to.equal(ethers.ZeroHash);
-    expect(await f.market.disputeEvidenceHash()).to.equal(ethers.ZeroHash);
+    expect(f.factory.interface.hasFunction('createAutoMarket')).to.equal(false);
   });
 
   it('commits every critical event term with deterministic onchain hashes', async () => {
@@ -85,11 +74,9 @@ describe('Factory, market types and immutable metadata', function () {
     await expect(f.factory.createEventMarket(1, 2, eventMetadata(), { value: FEE }))
       .to.be.revertedWithCustomError(f.market, 'InvalidTimeline');
     const reject = await ethers.deployContract('RejectETH');
-    const implementations = await deployMarketImplementations(
-      f.deployer, f.token.target, f.autoResolver.target, f.resolverSigner.address);
-    const factory = await ethers.deployContract('MarketFactory', [f.token.target, reject.target, f.autoResolver.target,
-      f.resolverSigner.address, BOND, DISPUTE_PERIOD,
-      implementations.autoMarketImplementation.target, implementations.eventMarketImplementation.target]);
+    const implementation = await deployMarketImplementation(f.deployer, f.token.target, f.resolverSigner.address);
+    const factory = await ethers.deployContract('MarketFactory', [f.token.target, reject.target,
+      f.resolverSigner.address, implementation.eventMarketImplementation.target]);
     await expect(factory.createEventMarket(f.eventTimes.closesAt, f.eventTimes.resolvesAt, eventMetadata(), { value: FEE }))
       .to.be.revertedWithCustomError(factory, 'TreasuryTransferFailed');
     expect(await factory.marketCount()).to.equal(0);
@@ -162,22 +149,16 @@ describe('Shared escrow, matching, secondary sales and fees', function () {
     await f.pair();
     const id = await f.place(f.alice, true, false, 80, 50);
     await time.increaseTo(f.eventTimes.resolvesAt);
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes-evidence');
-    await time.increase(DISPUTE_PERIOD);
-    await f.market.finalize();
+    await f.market.connect(f.resolverSigner).resolve(1);
     await f.book.connect(f.dave).cancelOrder(id);
     expect(await f.market.sharesOf(f.alice, true)).to.equal(100);
   });
 
-  it('allows creator fee claims without touching collateral or bonds', async () => {
+  it('allows creator fee claims without touching collateral', async () => {
     const f = await loadFixture(fixture);
     await f.pair();
-    await time.increaseTo(f.eventTimes.resolvesAt);
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    const bondBefore = await f.market.bondEscrowed();
     await f.feeVault.connect(f.creator).claim();
     expect(await f.collateral.locked()).to.equal(100n * UNIT);
-    expect(await f.market.bondEscrowed()).to.equal(bondBefore);
     await expect(f.feeVault.connect(f.creator).claim()).to.be.revertedWithCustomError(f.feeVault, 'NothingToClaim');
   });
 
@@ -206,230 +187,67 @@ describe('Shared escrow, matching, secondary sales and fees', function () {
   });
 });
 
-describe('Optimistic event resolution and isolated bonds', function () {
-  async function readyEvent() {
-    const f = await loadFixture(fixture);
-    await f.pair();
-    await time.increaseTo(f.eventTimes.resolvesAt);
-    return f;
-  }
-
-  it('enforces the explicit OPEN and CLOSED states and rejects early proposals', async () => {
+describe('Resolver Safe final resolution', function () {
+  it('enforces OPEN/CLOSED timing, resolver-only access, valid outcomes and one-time resolution', async () => {
     const f = await loadFixture(fixture);
     expect(await f.market.marketState()).to.equal(0);
-    await expect(f.market.propose(1, 'ipfs://evidence')).to.be.revertedWithCustomError(f.market, 'InvalidState');
     await time.increaseTo(f.eventTimes.closesAt);
     expect(await f.market.marketState()).to.equal(1);
-    await expect(f.market.propose(1, 'ipfs://evidence')).to.be.revertedWithCustomError(f.market, 'InvalidState');
-  });
-
-  it('accepts YES, NO or INVALID proposals with an exact 25 USDG isolated bond', async () => {
-    for (const outcome of [1, 2, 3]) {
-      const f = await fixture();
-      await f.pair();
-      await time.increaseTo(f.eventTimes.resolvesAt);
-      const collateralBefore = await f.collateral.locked();
-      await f.market.connect(f.carol).propose(outcome, `ipfs://evidence-${outcome}`);
-      expect(await f.market.marketState()).to.equal(2);
-      expect(await f.market.bondEscrowed()).to.equal(BOND);
-      expect(await f.token.balanceOf(f.market)).to.equal(BOND);
-      expect(await f.collateral.locked()).to.equal(collateralBefore);
-      expect(await f.market.disputeDeadline()).to.equal(BigInt(await time.latest()) + BigInt(DISPUTE_PERIOD));
-    }
-  });
-
-  it('rejects empty/oversized evidence, NONE outcomes and second proposals', async () => {
-    const f = await readyEvent();
-    await expect(f.market.connect(f.carol).propose(0, 'ipfs://x')).to.be.revertedWithCustomError(f.market, 'InvalidOutcome');
-    await expect(f.market.connect(f.carol).propose(1, '')).to.be.revertedWithCustomError(f.market, 'InvalidEvidence');
-    await expect(f.market.connect(f.carol).propose(1, 'x'.repeat(513))).to.be.revertedWithCustomError(f.market, 'InvalidEvidence');
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await expect(f.market.connect(f.dave).propose(2, 'ipfs://no')).to.be.revertedWithCustomError(f.market, 'InvalidState');
-  });
-
-  it('allows one alternative dispute inside 24 hours and isolates the matching bond', async () => {
-    const f = await readyEvent();
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await expect(f.market.connect(f.carol).dispute(2, 'ipfs://no')).to.be.revertedWithCustomError(f.market, 'SameParty');
-    await expect(f.market.connect(f.dave).dispute(1, 'ipfs://same')).to.be.revertedWithCustomError(f.market, 'InvalidOutcome');
-    await f.market.connect(f.dave).dispute(2, 'ipfs://no');
-    expect(await f.market.marketState()).to.equal(3);
-    expect(await f.market.bondEscrowed()).to.equal(2n * BOND);
-    expect(await f.token.balanceOf(f.market)).to.equal(2n * BOND);
-    expect(await f.collateral.locked()).to.equal(100n * UNIT);
-    await expect(f.market.connect(f.alice).dispute(3, 'ipfs://invalid')).to.be.revertedWithCustomError(f.market, 'InvalidState');
-  });
-
-  it('rejects disputes at and after the deadline', async () => {
-    const f = await readyEvent();
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await time.increaseTo(await f.market.disputeDeadline());
-    await expect(f.market.connect(f.dave).dispute(2, 'ipfs://no')).to.be.revertedWithCustomError(f.market, 'DisputeWindowClosed');
-  });
-
-  it('allows permissionless undisputed finalization and returns the proposer bond', async () => {
-    const f = await readyEvent();
-    const before = await f.token.balanceOf(f.carol);
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await expect(f.market.connect(f.alice).finalize()).to.be.revertedWithCustomError(f.market, 'DisputeWindowOpen');
-    await time.increaseTo(await f.market.disputeDeadline());
-    await f.market.connect(f.alice).finalize();
-    expect(await f.market.resolvedOutcome()).to.equal(1);
-    expect(await f.token.balanceOf(f.carol)).to.equal(before);
-    expect(await f.market.bondEscrowed()).to.equal(0);
-    await expect(f.market.finalize()).to.be.revertedWithCustomError(f.market, 'InvalidState');
-  });
-
-  it('restricts disputed adjudication to the configured resolver only', async () => {
-    const f = await readyEvent();
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await f.market.connect(f.dave).dispute(2, 'ipfs://no');
-    for (const actor of [f.creator, f.treasury, f.alice, f.carol, f.dave])
-      await expect(f.market.connect(actor).adjudicate(1)).to.be.revertedWithCustomError(f.market, 'Unauthorized');
-    await f.market.connect(f.resolverSigner).adjudicate(1);
-    expect(await f.market.marketState()).to.equal(4);
-    await expect(f.market.connect(f.resolverSigner).adjudicate(2)).to.be.revertedWithCustomError(f.market, 'InvalidState');
-  });
-
-  it('awards both bonds to the proposer when the proposer wins', async () => {
-    const f = await readyEvent();
-    const proposerBefore = await f.token.balanceOf(f.carol);
-    const disputerBefore = await f.token.balanceOf(f.dave);
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await f.market.connect(f.dave).dispute(2, 'ipfs://no');
-    await f.market.connect(f.resolverSigner).adjudicate(1);
-    expect(await f.token.balanceOf(f.carol)).to.equal(proposerBefore + BOND);
-    expect(await f.token.balanceOf(f.dave)).to.equal(disputerBefore - BOND);
-    expect(await f.token.balanceOf(f.market)).to.equal(0);
-  });
-
-  it('awards both bonds to the disputer when the disputer wins', async () => {
-    const f = await readyEvent();
-    const proposerBefore = await f.token.balanceOf(f.carol);
-    const disputerBefore = await f.token.balanceOf(f.dave);
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await f.market.connect(f.dave).dispute(2, 'ipfs://no');
-    await f.market.connect(f.resolverSigner).adjudicate(2);
-    expect(await f.token.balanceOf(f.carol)).to.equal(proposerBefore - BOND);
-    expect(await f.token.balanceOf(f.dave)).to.equal(disputerBefore + BOND);
-  });
-
-  it('returns each bond when the resolver selects the third outcome', async () => {
-    const f = await readyEvent();
-    const proposerBefore = await f.token.balanceOf(f.carol);
-    const disputerBefore = await f.token.balanceOf(f.dave);
-    await f.market.connect(f.carol).propose(1, 'ipfs://yes');
-    await f.market.connect(f.dave).dispute(2, 'ipfs://no');
-    await f.market.connect(f.resolverSigner).adjudicate(3);
-    expect(await f.token.balanceOf(f.carol)).to.equal(proposerBefore);
-    expect(await f.token.balanceOf(f.dave)).to.equal(disputerBefore);
-    expect(await f.market.resolvedOutcome()).to.equal(3);
+    await expect(f.market.connect(f.resolverSigner).resolve(1)).to.be.revertedWithCustomError(f.market, 'NotReady');
+    await time.increaseTo(f.eventTimes.resolvesAt);
+    await expect(f.market.connect(f.carol).resolve(1)).to.be.revertedWithCustomError(f.market, 'Unauthorized');
+    await expect(f.market.connect(f.resolverSigner).resolve(0)).to.be.revertedWithCustomError(f.market, 'InvalidAmount');
+    await expect(f.market.connect(f.resolverSigner).resolve(1)).to.emit(f.market, 'Resolved').withArgs(1);
+    expect(await f.market.marketState()).to.equal(2);
+    await expect(f.market.connect(f.resolverSigner).resolve(2)).to.be.revertedWithCustomError(f.market, 'AlreadyResolved');
   });
 
   it('redeems YES and NO outcomes at exactly 1 or 0 USDG without double redemption', async () => {
-    for (const outcome of [1, 2]) {
-      const f = await fixture();
-      await f.pair(100n);
-      await time.increaseTo(f.eventTimes.resolvesAt);
-      await f.market.connect(f.carol).propose(outcome, 'ipfs://evidence');
-      await time.increase(DISPUTE_PERIOD);
-      await f.market.finalize();
-      const winner = outcome === 1 ? f.alice : f.bob;
-      const side = outcome === 1;
-      const before = await f.token.balanceOf(winner);
-      await f.market.connect(winner).redeem(side, 100);
-      expect(await f.token.balanceOf(winner) - before).to.equal(100n * UNIT);
-      await expect(f.market.connect(winner).redeem(side, 1)).to.be.reverted;
-    }
+    const f = await loadFixture(fixture);
+    const noCase = await f.createEvent();
+    await f.pair(100n, 60, f.alice, f.bob, noCase.market.target);
+    await f.pair(100n);
+    await time.increaseTo(f.eventTimes.resolvesAt);
+    await f.market.connect(f.resolverSigner).resolve(1);
+    await noCase.market.connect(f.resolverSigner).resolve(2);
+    const aliceBefore = await f.token.balanceOf(f.alice);
+    await f.market.connect(f.alice).redeem(true, 100);
+    expect(await f.token.balanceOf(f.alice) - aliceBefore).to.equal(100n * UNIT);
+    await f.market.connect(f.bob).redeem(false, 100);
+    expect(await f.collateral.locked()).to.equal(0);
+    await expect(f.market.connect(f.alice).redeem(true, 100)).to.be.reverted;
+    const bobBefore = await f.token.balanceOf(f.bob);
+    await noCase.market.connect(f.bob).redeem(false, 100);
+    expect(await f.token.balanceOf(f.bob) - bobBefore).to.equal(100n * UNIT);
+    await noCase.market.connect(f.alice).redeem(true, 100);
+    const noVault = await ethers.getContractAt('CollateralVault', await noCase.market.collateralVault());
+    expect(await noVault.locked()).to.equal(0);
   });
 
-  it('redeems INVALID at exactly 0.5 USDG per YES and NO share and conserves collateral', async () => {
-    const f = await readyEvent();
-    await f.market.connect(f.carol).propose(3, 'ipfs://invalid');
-    await time.increase(DISPUTE_PERIOD);
-    await f.market.finalize();
-    const yesBefore = await f.token.balanceOf(f.alice);
-    const noBefore = await f.token.balanceOf(f.bob);
-    await f.market.connect(f.alice).redeem(true, 100);
-    expect(await f.token.balanceOf(f.alice) - yesBefore).to.equal(50n * UNIT);
-    expect(await f.collateral.locked()).to.equal(50n * UNIT);
-    await f.market.connect(f.bob).redeem(false, 100);
-    expect(await f.token.balanceOf(f.bob) - noBefore).to.equal(50n * UNIT);
+  it('redeems INVALID at exactly 0.5 USDG per side and conserves a complete pair', async () => {
+    const f = await loadFixture(fixture);
+    await f.pair(101n);
+    await time.increaseTo(f.eventTimes.resolvesAt);
+    await f.market.connect(f.resolverSigner).resolve(3);
+    const aliceBefore = await f.token.balanceOf(f.alice);
+    const bobBefore = await f.token.balanceOf(f.bob);
+    await f.market.connect(f.alice).redeem(true, 101);
+    await f.market.connect(f.bob).redeem(false, 101);
+    expect(await f.token.balanceOf(f.alice) - aliceBefore).to.equal(50_500_000n);
+    expect(await f.token.balanceOf(f.bob) - bobBefore).to.equal(50_500_000n);
     expect(await f.collateral.locked()).to.equal(0);
   });
 
-  it('gives resolver, creator and treasury no collateral or rule-changing powers', async () => {
-    const f = await readyEvent();
-    for (const actor of [f.resolverSigner, f.creator, f.treasury]) {
-      await expect(f.collateral.connect(actor).release(actor.address, UNIT)).to.be.revertedWithCustomError(f.collateral, 'Unauthorized');
-      await expect(f.market.connect(actor).releaseShares(actor.address, true, 1)).to.be.revertedWithCustomError(f.market, 'Unauthorized');
-    }
-    expect(f.market.interface.hasFunction('setResolver')).to.equal(false);
-    expect(f.market.interface.hasFunction('setMetadata')).to.equal(false);
-  });
-});
-
-describe('Uniswap V3 historical TWAP automatic resolution', function () {
-  it('binds only the approved WETH/USDG pool and generates canonical AUTO metadata', async () => {
+  it('gives resolver, creator and treasury no collateral, fee, metadata, share or order powers', async () => {
     const f = await loadFixture(fixture);
-    const { market } = await f.createAuto();
-    const metadata = await market.metadata();
-    expect(metadata.question).to.include('ETH/USDG');
-    expect(metadata.rules).to.include('60-minute');
-    expect(metadata.rules).to.include('ending exactly at the resolution timestamp');
-    expect(metadata.primarySource.toLowerCase()).to.include(f.pool.target.slice(2).toLowerCase());
-    expect(await f.autoResolver.weth()).to.equal(f.weth.target);
-    expect(await f.autoResolver.usdg()).to.equal(f.token.target);
-    expect(await f.autoResolver.pool()).to.equal(f.pool.target);
-  });
-
-  it('rejects early resolution and resolves threshold comparisons in both directions', async () => {
-    const f = await loadFixture(fixture);
-    const above = await f.createAuto(f.creator, { threshold: 2000n * UNIT, condition: 0 });
-    await expect(above.market.resolve()).to.be.revertedWithCustomError(above.market, 'NotReady');
-    await time.increaseTo(above.terms.resolvesAt);
-    await above.market.resolve();
-    expect(await above.market.resolvedOutcome()).to.equal(1);
-    const below = await f.createAuto(f.creator, { threshold: 2000n * UNIT, condition: 1 });
-    await time.increaseTo(below.terms.resolvesAt);
-    await below.market.resolve();
-    expect(await below.market.resolvedOutcome()).to.equal(2);
-  });
-
-  it('uses the historical interval ending at resolvesAt even when resolve is delayed', async () => {
-    const f = await loadFixture(fixture);
-    const wethIsToken0 = (await f.pool.token0()).toLowerCase() === f.weth.target.toLowerCase();
-    const beforeTick = Math.floor(Math.log(wethIsToken0 ? 2000e6 / 1e18 : 1e18 / 2000e6) / Math.log(1.0001));
-    const afterTick = Math.floor(Math.log(wethIsToken0 ? 10000e6 / 1e18 : 1e18 / 10000e6) / Math.log(1.0001));
-    const created = await f.createAuto(f.creator, { threshold: 3000n * UNIT });
-    await f.pool.setTickSchedule(beforeTick, afterTick, created.terms.resolvesAt + 1);
-    await time.increaseTo(created.terms.resolvesAt + 3600);
-    await created.market.resolve();
-    expect(await created.market.resolvedOutcome()).to.equal(2);
-  });
-
-  it('rejects fake tokens, wrong pools and unsupported pairs at construction', async () => {
-    const f = await loadFixture(fixture);
-    const fake = await ethers.deployContract('MockWETH');
-    const wrongPool = await ethers.deployContract('MockV3Pool', [f.weth.target, fake.target, 3000, 0]);
-    await expect(ethers.deployContract('UniswapTwapResolver', [f.weth.target, f.token.target, wrongPool.target, 3600]))
-      .to.be.revertedWithCustomError(f.autoResolver, 'InvalidConfiguration');
-    await expect(ethers.deployContract('UniswapTwapResolver', [f.alice.address, f.token.target, f.pool.target, 3600]))
-      .to.be.revertedWithCustomError(f.autoResolver, 'InvalidConfiguration');
-  });
-
-  it('fails closed when the pool lacks historical observation capacity', async () => {
-    const f = await loadFixture(fixture);
-    const created = await f.createAuto(f.creator, { threshold: 2000n * UNIT });
-    await f.pool.setHistoryAvailable(false);
-    await time.increaseTo(created.terms.resolvesAt);
-    await expect(created.market.resolve()).to.be.revertedWith('OLD');
-    expect(await created.market.resolved()).to.equal(false);
-  });
-
-  it('never exposes a spot-price, pool-change, token-change or manual outcome function', async () => {
-    const f = await loadFixture(fixture);
-    for (const name of ['setPool', 'setWeth', 'setUSDG', 'spotPrice', 'setOutcome', 'owner'])
-      expect(f.autoResolver.interface.hasFunction(name)).to.equal(false);
+    for (const name of ['withdraw', 'setQuestion', 'setRules', 'setSource', 'setClosesAt', 'setResolvesAt',
+      'setFee', 'transferShares', 'cancelOrder']) expect(f.market.interface.hasFunction(name)).to.equal(false);
+    await expect(f.market.connect(f.creator).resolve(1)).to.be.revertedWithCustomError(f.market, 'Unauthorized');
+    await expect(f.market.connect(f.resolverSigner).mintPair(f.resolverSigner, f.resolverSigner, 1))
+      .to.be.revertedWithCustomError(f.market, 'Unauthorized');
+    await expect(f.collateral.connect(f.resolverSigner).release(f.resolverSigner, 1))
+      .to.be.revertedWithCustomError(f.collateral, 'Unauthorized');
+    await expect(f.feeVault.connect(f.resolverSigner).claim()).to.be.revertedWithCustomError(f.feeVault, 'NothingToClaim');
+    expect(await f.factory.resolverMultisig()).to.equal(f.resolverSigner.address);
   });
 });

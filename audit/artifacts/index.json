@@ -1,80 +1,42 @@
 {
-  "AutoMarketImplementation": {
-    "sourcePath": "contracts/AutoMarket.sol",
-    "category": "IMPLEMENTATION",
-    "creationBytecodeBytes": 11698,
-    "runtimeBytecodeBytes": 11275,
-    "creationBytecodeSha256": "sha256:288a8c2c144afdc49bf22ca0cdfdc0d171903e2ec61e4918a23dc495a3e34155",
-    "runtimeBytecodeSha256": "sha256:615d8b11b4d05de1ada26c8e245afd1c8843f32b26a4ef4da836c7d93bc0b0fd",
-    "creationBytecodeKeccak256": "0x1ff541422f0ce65fa22538dcda185504693bc53a8b4e1da6c9e10348bcaefd2f",
-    "runtimeBytecodeKeccak256": "0x23c5786f7d7c7e6caa563979391e0b75aeed61296baea2dc3e5197cc14133ab2"
-  },
   "EventMarketImplementation": {
-    "sourcePath": "contracts/EventMarket.sol",
-    "category": "IMPLEMENTATION",
-    "creationBytecodeBytes": 15532,
-    "runtimeBytecodeBytes": 14841,
-    "creationBytecodeSha256": "sha256:f38eb7c2469229b25ce46e0b35668a873ac4951f91f50e01104bebabdb2b63bd",
-    "runtimeBytecodeSha256": "sha256:06ef64157ffa14442c36864cde1161a3f198217cccc3128e0d7f1c93327eb83e",
-    "creationBytecodeKeccak256": "0x9994b6c74e478b7579b52d9ade48852361e14f161d508e4abcb06fc90cc68313",
-    "runtimeBytecodeKeccak256": "0x382f2240e4c4d476ea7bab37e125ab10bd35266fd1cdfeb1d36a01527d224667"
-  },
-  "UniswapTwapResolver": {
-    "sourcePath": "contracts/resolution/UniswapTwapResolver.sol",
-    "category": "GLOBAL",
-    "creationBytecodeBytes": 8211,
-    "runtimeBytecodeBytes": 6887,
-    "creationBytecodeSha256": "sha256:cf1bb0718e044763e9253fb0afaf63b9d678c765d3c2e9c3ded3ada05c20ea19",
-    "runtimeBytecodeSha256": "sha256:6179edb98594fe7cdc8195a2eb987f8f3baeca30d4ac2748befaeae43899f538",
-    "creationBytecodeKeccak256": "0xa20e519a82a92ec08374558916d906d723fa2bf967043a677a1a72e538558796",
-    "runtimeBytecodeKeccak256": "0xc8f7d019e8cc5c311b7785c2957c63f28ef6a54b4eb14c1cb2f358e5c1ffe251"
+    "source": "contracts/EventMarket.sol",
+    "contractName": "EventMarket",
+    "creationBytes": 10773,
+    "runtimeBytes": 10324,
+    "creationBytecodeSha256": "sha256:abb5ed9cefb9de7fa0ecb76d5a56eebb0b4c5efbda54a4a37bc75af88776c1d2",
+    "runtimeBytecodeSha256": "sha256:dbc1808a0ddeda99c6a3e879d1b8d81fd92105103266b2575d7ca8b3a6d39bcd"
   },
   "MarketFactory": {
-    "sourcePath": "contracts/MarketFactory.sol",
-    "category": "GLOBAL",
-    "creationBytecodeBytes": 14722,
-    "runtimeBytecodeBytes": 3209,
-    "creationBytecodeSha256": "sha256:5690a8abd7caa02d8f08e14f1a159baec68bc2bf98d58574337167076281f872",
-    "runtimeBytecodeSha256": "sha256:1da5c7eb6830727ee85b73154912066d88dc52a7a56354d684e84eb57b0c526b",
-    "creationBytecodeKeccak256": "0xeb02d6d009381e09cd3397f26f9b1444ae0398e3caa60c496e23c9f97bb73830",
-    "runtimeBytecodeKeccak256": "0xab8adca933c023429f63a7f81a98a4cef9160cbf78145b494c4e5143ef91ffaa"
-  },
-  "FeeVault": {
-    "sourcePath": "contracts/FeeVault.sol",
-    "category": "GLOBAL_CREATED_BY_FACTORY",
-    "creationBytecodeBytes": 2811,
-    "runtimeBytecodeBytes": 2548,
-    "creationBytecodeSha256": "sha256:f47f18477ea774e59e084352dd0eb6128c3b53ee534de8da586a30186b9607c7",
-    "runtimeBytecodeSha256": "sha256:f3fd756741c05e2b98e13ce56c932af786e1e13e0cf4d31da4aa6c3415de05f7",
-    "creationBytecodeKeccak256": "0x65570ec69c3220da16fc35d19ed231c232fad0637900b428e4acaa6411cb77a9",
-    "runtimeBytecodeKeccak256": "0xb84ca34ff7d0f01a8861b8f89d59e885ed40de4bfa9d771c3e552a97e379043e"
+    "source": "contracts/MarketFactory.sol",
+    "contractName": "MarketFactory",
+    "creationBytes": 12630,
+    "runtimeBytes": 2130,
+    "creationBytecodeSha256": "sha256:3ff656169f20f6737def41e95dae8b981dc997cd0f740e8392995d48d5b7e76f",
+    "runtimeBytecodeSha256": "sha256:bd48b57146d77f2d19e5126c9c89102d21bca9fe0bed186dcd2b904388b2d1b5"
   },
   "OrderBook": {
-    "sourcePath": "contracts/OrderBook.sol",
-    "category": "GLOBAL_CREATED_BY_FACTORY",
-    "creationBytecodeBytes": 8143,
-    "runtimeBytecodeBytes": 7861,
-    "creationBytecodeSha256": "sha256:ec83d71cc27c97672a530644882a0876b0c8d1cc32d51ec75dcc9b8597629830",
-    "runtimeBytecodeSha256": "sha256:488888881cdafde77bd63f0a292b25808ea63215555c878a6f87f5ef28a75019",
-    "creationBytecodeKeccak256": "0xace41142f00b4ff04f19192039de02cc20a8d74e8e42c244e0f81cc10a4bb46a",
-    "runtimeBytecodeKeccak256": "0x63739fca2efb43724136bcf1c72184f5c5ba47111cf18a830ee3fefcad3a4509"
+    "source": "contracts/OrderBook.sol",
+    "contractName": "OrderBook",
+    "creationBytes": 8143,
+    "runtimeBytes": 7861,
+    "creationBytecodeSha256": "sha256:0947eddcfceaf13dbadd9e81a4ad15fb1bd3b305d0e50897f9bbaa685ed06e93",
+    "runtimeBytecodeSha256": "sha256:59f61b7eb912871971f8e631101c5fe18a18b1c010e095308242c525a4a733a5"
+  },
+  "FeeVault": {
+    "source": "contracts/FeeVault.sol",
+    "contractName": "FeeVault",
+    "creationBytes": 2811,
+    "runtimeBytes": 2548,
+    "creationBytecodeSha256": "sha256:f47f18477ea774e59e084352dd0eb6128c3b53ee534de8da586a30186b9607c7",
+    "runtimeBytecodeSha256": "sha256:f3fd756741c05e2b98e13ce56c932af786e1e13e0cf4d31da4aa6c3415de05f7"
   },
   "CollateralVault": {
-    "sourcePath": "contracts/CollateralVault.sol",
-    "category": "PER_MARKET",
-    "creationBytecodeBytes": 1556,
-    "runtimeBytecodeBytes": 1363,
+    "source": "contracts/CollateralVault.sol",
+    "contractName": "CollateralVault",
+    "creationBytes": 1556,
+    "runtimeBytes": 1363,
     "creationBytecodeSha256": "sha256:eac5aa77e707883f7289780b9bff9bcd63b37ee95f7dbb1d070b37d774c0155c",
-    "runtimeBytecodeSha256": "sha256:1b3b4bff5eebea586c21c2356b4526a0cc33f01a6386fc42abe65d6300198bcc",
-    "creationBytecodeKeccak256": "0x062a6cfb431da5f3231385c79ee965044942501cac964a852bf3ad11ccbe2587",
-    "runtimeBytecodeKeccak256": "0x12511adcbfb6dd872022424710fc9c7daefc4ec8de007df2d690f9ba61ab1425"
-  },
-  "MinimalMarketClone": {
-    "sourcePath": "@openzeppelin/contracts/proxy/Clones.sol@5.4.0",
-    "category": "PER_MARKET",
-    "creationBytecodeBytes": 55,
-    "runtimeBytecodeBytes": 45,
-    "runtimePattern": "0x363d3d373d3d3d363d73<20-byte-implementation>5af43d82803e903d91602b57fd5bf3",
-    "implementationBinding": "The 20-byte target is fixed in clone runtime; no storage slot or setter exists."
+    "runtimeBytecodeSha256": "sha256:1b3b4bff5eebea586c21c2356b4526a0cc33f01a6386fc42abe65d6300198bcc"
   }
 }

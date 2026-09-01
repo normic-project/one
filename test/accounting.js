@@ -33,7 +33,7 @@ async function assertSolvent(f) {
       : await f.market.totalShares(outcome === 1) * UNIT;
     expect(await f.collateral.locked()).to.equal(expected);
   }
-  expect(await f.token.balanceOf(f.market)).to.equal(await f.market.bondEscrowed());
+  expect(await f.token.balanceOf(f.market)).to.equal(0);
 }
 
 describe('Accounting invariants', function () {
@@ -74,9 +74,7 @@ describe('Accounting invariants', function () {
       await assertSolvent(f);
     }
     await time.increaseTo(f.eventTimes.resolvesAt);
-    await f.market.connect(f.carol).propose(1, 'ipfs://invariant-evidence');
-    await time.increase(86400);
-    await f.market.finalize();
+    await f.market.connect(f.resolverSigner).resolve(1);
     for (let id = 1n; id < await f.book.nextOrderId(); id++)
       if ((await f.book.orders(id)).remaining > 0) await f.book.cancelOrder(id);
     for (const trader of f.traders) {

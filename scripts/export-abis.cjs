@@ -3,8 +3,7 @@ const path = require('node:path');
 const contracts = {
   MarketFactory: 'MarketFactory.sol', PredictionMarket: 'PredictionMarket.sol',
   OrderBook: 'OrderBook.sol', FeeVault: 'FeeVault.sol', CollateralVault: 'CollateralVault.sol',
-  UniswapTwapResolver: 'resolution/UniswapTwapResolver.sol',
-  AutoMarket: 'AutoMarket.sol', EventMarket: 'EventMarket.sol'
+  EventMarket: 'EventMarket.sol'
 };
 fs.mkdirSync('src/generated', { recursive: true });
 for (const [name, file] of Object.entries(contracts)) {

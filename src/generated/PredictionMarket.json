@@ -135,7 +135,7 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "enum IResolutionModule.Outcome",
+        "internalType": "enum IMarketTypes.Outcome",
         "name": "outcome",
         "type": "uint8"
       }
@@ -353,20 +353,7 @@
     "name": "marketState",
     "outputs": [
       {
-        "internalType": "enum IResolutionModule.MarketState",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "marketType",
-    "outputs": [
-      {
-        "internalType": "enum IResolutionModule.MarketType",
+        "internalType": "enum IMarketTypes.MarketState",
         "name": "",
         "type": "uint8"
       }
@@ -421,7 +408,7 @@
             "type": "string"
           }
         ],
-        "internalType": "struct IResolutionModule.Metadata",
+        "internalType": "struct IMarketTypes.Metadata",
         "name": "",
         "type": "tuple"
       }
@@ -607,7 +594,7 @@
     "name": "resolvedOutcome",
     "outputs": [
       {
-        "internalType": "enum IResolutionModule.Outcome",
+        "internalType": "enum IMarketTypes.Outcome",
         "name": "",
         "type": "uint8"
       }

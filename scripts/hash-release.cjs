@@ -32,9 +32,7 @@ function digest(selected) {
 const selected = files();
 const productionContracts = selected.filter(file => file.startsWith('contracts/') && !file.startsWith('contracts/test/'));
 const artifacts = [
-  ['AutoMarketImplementation', 'artifacts/contracts/AutoMarket.sol/AutoMarket.json'],
   ['EventMarketImplementation', 'artifacts/contracts/EventMarket.sol/EventMarket.json'],
-  ['UniswapTwapResolver', 'artifacts/contracts/resolution/UniswapTwapResolver.sol/UniswapTwapResolver.json'],
   ['MarketFactory', 'artifacts/contracts/MarketFactory.sol/MarketFactory.json']
 ];
 const bytecodeHashes = {};

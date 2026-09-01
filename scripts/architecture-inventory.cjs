@@ -7,53 +7,44 @@ async function bytes(name) {
   return { creationBytes: (artifact.bytecode.length - 2) / 2,
     runtimeBytes: (artifact.deployedBytecode.length - 2) / 2 };
 }
-
 async function deploymentGas(contract) {
   return (await contract.deploymentTransaction().wait()).gasUsed.toString();
 }
-
 async function main() {
   const f = await fixture();
-  const autoMarketStandalone = await ethers.deployContract('AutoMarket',
-    [f.token.target, f.book.target, f.autoResolver.target]);
-  const eventMarketStandalone = await ethers.deployContract('EventMarket',
-    [f.token.target, f.book.target, f.resolverSigner.address, 25n * 1_000_000n, 86_400]);
-  const feeVaultStandalone = await ethers.deployContract('FeeVault', [f.token.target, f.treasury.address]);
-  const orderBookStandalone = await ethers.deployContract('OrderBook', [f.token.target, feeVaultStandalone.target]);
-  const collateralVaultStandalone = await ethers.deployContract('CollateralVault', [f.token.target]);
+  const eventStandalone = await ethers.deployContract('EventMarket',
+    [f.token.target, f.book.target, f.resolverSigner.address]);
+  const feeStandalone = await ethers.deployContract('FeeVault', [f.token.target, f.treasury.address]);
+  const bookStandalone = await ethers.deployContract('OrderBook', [f.token.target, feeStandalone.target]);
+  const collateralStandalone = await ethers.deployContract('CollateralVault', [f.token.target]);
   const definitions = {
-    AutoMarketImplementation: ['AutoMarket', 'contracts/AutoMarket.sol', autoMarketStandalone,
-      'Immutable logic target for every AUTO clone'],
-    EventMarketImplementation: ['EventMarket', 'contracts/EventMarket.sol', eventMarketStandalone,
-      'Immutable logic target for every EVENT clone'],
-    UniswapTwapResolver: ['UniswapTwapResolver', 'contracts/resolution/UniswapTwapResolver.sol', f.autoResolver,
-      'Canonical historical WETH/USDG TWAP resolution'],
+    EventMarketImplementation: ['EventMarket', 'contracts/EventMarket.sol', eventStandalone,
+      'Immutable logic target for every event-market clone', true, false],
     MarketFactory: ['MarketFactory', 'contracts/MarketFactory.sol', f.factory,
-      'Permissionless creation, registry, listing-fee forwarding and fixed implementation bindings'],
-    FeeVault: ['FeeVault', 'contracts/FeeVault.sol', feeVaultStandalone,
-      'Creator fee liabilities and protocol-fee forwarding'],
-    OrderBook: ['OrderBook', 'contracts/OrderBook.sol', orderBookStandalone,
-      'Shared order escrow, matching, cancellation and secondary sales'],
-    CollateralVault: ['CollateralVault', 'contracts/CollateralVault.sol', collateralVaultStandalone,
-      'Isolated per-market collateral custody']
+      'Creation, registry, listing-fee forwarding and fixed implementation binding', true, false],
+    FeeVault: ['FeeVault', 'contracts/FeeVault.sol', feeStandalone,
+      'Creator fee liabilities and protocol-fee forwarding', true, false],
+    OrderBook: ['OrderBook', 'contracts/OrderBook.sol', bookStandalone,
+      'Shared order escrow, matching, cancellation and secondary sales', true, false],
+    CollateralVault: ['CollateralVault', 'contracts/CollateralVault.sol', collateralStandalone,
+      'Isolated per-market collateral custody', false, true]
   };
   const inventory = {};
-  for (const [key, [artifact, source, contract, purpose]] of Object.entries(definitions)) {
+  for (const [key, [artifact, source, contract, purpose, global, perMarket]] of Object.entries(definitions)) {
     inventory[key] = { source, purpose, ...(await bytes(artifact)), standaloneDeploymentGas: await deploymentGas(contract),
-      permanentMainnetAddress: key !== 'CollateralVault', globallyDeployedOnce: key !== 'CollateralVault',
-      deployedPerMarket: key === 'CollateralVault', storesCreationBytecode: key === 'MarketFactory',
-      constructorOnlyLogic: ['AutoMarketImplementation', 'EventMarketImplementation', 'UniswapTwapResolver',
-        'MarketFactory', 'FeeVault', 'OrderBook', 'CollateralVault'].includes(key) };
+      permanentMainnetAddress: true, globallyDeployedOnce: global, deployedPerMarket: perMarket };
   }
   inventory.MinimalMarketClone = { source: '@openzeppelin/contracts/proxy/Clones.sol',
-    purpose: 'Fixed EIP-1167 delegate target for one market', creationBytes: 55, runtimeBytes: 45,
+    purpose: 'Fixed EIP-1167 delegate target for one event market', creationBytes: 55, runtimeBytes: 45,
     standaloneDeploymentGas: 'measured as part of create-market transaction', permanentMainnetAddress: true,
-    globallyDeployedOnce: false, deployedPerMarket: true, storesCreationBytecode: false, constructorOnlyLogic: false };
-  fs.writeFileSync('reports/architecture-final-inventory.json', JSON.stringify(inventory, null, 2) + '\n');
+    globallyDeployedOnce: false, deployedPerMarket: true };
+  const summary = {
+    globalPermanentContractCount: 4,
+    perMarketContractCount: 2,
+    totalProductionRuntimeBytes: Object.keys(definitions)
+      .reduce((sum, key) => sum + Number(inventory[key].runtimeBytes), 0)
+  };
+  fs.writeFileSync('reports/architecture-final-inventory.json', JSON.stringify({ summary, contracts: inventory }, null, 2) + '\n');
   console.log('Architecture inventory written.');
 }
-
-main().catch(error => {
-  console.error(error.shortMessage || error.message);
-  process.exitCode = 1;
-});
+main().catch(error => { console.error(error.shortMessage || error.message); process.exitCode = 1; });

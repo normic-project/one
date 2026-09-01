@@ -12,28 +12,8 @@
         "type": "address"
       },
       {
-        "internalType": "contract IResolutionModule",
-        "name": "autoResolver_",
-        "type": "address"
-      },
-      {
         "internalType": "address",
         "name": "resolverMultisig_",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "eventProposalBond_",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint64",
-        "name": "eventDisputePeriod_",
-        "type": "uint64"
-      },
-      {
-        "internalType": "address",
-        "name": "autoMarketImplementation_",
         "type": "address"
       },
       {
@@ -109,12 +89,6 @@
       },
       {
         "indexed": false,
-        "internalType": "enum IResolutionModule.MarketType",
-        "name": "marketType",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
         "internalType": "bytes32",
         "name": "metadataHash",
         "type": "bytes32"
@@ -134,73 +108,6 @@
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "autoMarketImplementation",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "autoResolver",
-    "outputs": [
-      {
-        "internalType": "contract IResolutionModule",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint128",
-            "name": "threshold",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint64",
-            "name": "closesAt",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "resolvesAt",
-            "type": "uint64"
-          },
-          {
-            "internalType": "enum IResolutionModule.Condition",
-            "name": "condition",
-            "type": "uint8"
-          }
-        ],
-        "internalType": "struct IResolutionModule.AutoTerms",
-        "name": "terms",
-        "type": "tuple"
-      }
-    ],
-    "name": "createAutoMarket",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "market",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -258,7 +165,7 @@
             "type": "string"
           }
         ],
-        "internalType": "struct IResolutionModule.Metadata",
+        "internalType": "struct IMarketTypes.Metadata",
         "name": "metadata",
         "type": "tuple"
       }
@@ -276,38 +183,12 @@
   },
   {
     "inputs": [],
-    "name": "eventDisputePeriod",
-    "outputs": [
-      {
-        "internalType": "uint64",
-        "name": "",
-        "type": "uint64"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "eventMarketImplementation",
     "outputs": [
       {
         "internalType": "address",
         "name": "",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "eventProposalBond",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",

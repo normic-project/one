@@ -80,12 +80,10 @@ test('portfolio shows open orders, positions, INVALID value and redemption', asy
   await expect(page.locator('tbody tr').first()).toBeVisible();
 });
 
-test('market pages render automatic, proposed, disputed, YES, NO and INVALID states', async ({ page, request }) => {
+test('market pages render pending, YES, NO and INVALID event states', async ({ page, request }) => {
   const fixture = await (await request.get('http://127.0.0.1:8547/fixture')).json();
   const cases = [
-    [fixture.automatic, 'AUTO_MARKET', 'Historical TWAP'],
-    [fixture.proposed, 'EVENT_MARKET', 'Proposed'],
-    [fixture.disputed, 'EVENT_MARKET', 'Disputed'],
+    [fixture.pending, 'EVENT_MARKET', 'Closed'],
     [fixture.resolvedYes, 'EVENT_MARKET', 'Resolved YES'],
     [fixture.resolvedNo, 'EVENT_MARKET', 'Resolved NO'],
     [fixture.invalid, 'EVENT_MARKET', 'Resolved INVALID']
@@ -95,45 +93,35 @@ test('market pages render automatic, proposed, disputed, YES, NO and INVALID sta
     await expect(page.getByText(type, { exact: true })).toBeVisible();
     await expect(page.getByText(state, { exact: true }).last()).toBeVisible();
   }
-  await page.goto(`/market/${fixture.proposed}`);
-  await expect(page.getByLabel('Alternative outcome')).toBeVisible();
-  await page.goto(`/market/${fixture.disputed}`);
-  await expect(page.getByText('Redemption remains disabled')).toBeVisible();
 });
 
-test('submits an optimistic proposal and a dispute through the market UI', async ({ page, request }, testInfo) => {
+test('shows resolver-only finalization and no deleted resolution controls', async ({ page, request }) => {
   const fixture = await (await request.get('http://127.0.0.1:8547/fixture')).json();
-  const suffix = testInfo.project.name === 'mobile' ? 'Mobile' : 'Desktop';
-  await page.goto(`/market/${fixture[`proposalReady${suffix}`]}`);
-  await connect(page);
-  await page.getByLabel('Proposal evidence').fill('ipfs://browser-proposal-yes');
-  await page.getByRole('button', { name: /Propose outcome/ }).click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
-  await expect(page.getByText('Proposed', { exact: true }).last()).toBeVisible();
-
-  await page.goto(`/market/${fixture[`disputeAction${suffix}`]}`);
-  await connect(page);
-  await page.getByLabel('Dispute evidence').fill('ipfs://browser-dispute-no');
-  await page.getByRole('button', { name: /Dispute ·/ }).click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
-  await expect(page.getByText('Disputed', { exact: true }).last()).toBeVisible();
+  await page.goto(`/market/${fixture.pending}`);
+  await expect(page.getByRole('heading', { name: 'Final resolution' })).toBeVisible();
+  await expect(page.getByText('Only the configured Resolver Safe')).toBeVisible();
+  await expect(page.getByText('Redemption remains disabled')).toBeVisible();
+  await expect(page.getByLabel('Proposal evidence')).toHaveCount(0);
+  await expect(page.getByLabel('Dispute evidence')).toHaveCount(0);
+  await expect(page.getByText(/TWAP/)).toHaveCount(0);
 });
 
-test('creates an Automatic market through a real local contract transaction', async ({ page }) => {
+test('creates a general event market through a real local contract transaction', async ({ page }) => {
   await page.goto('/create');
   await connect(page);
-  await page.getByLabel('Automatic threshold').fill('4000');
-  await expect(page.getByRole('textbox', { name: 'Market question' })).toHaveValue(/Will ETH\/USDG be at or above 4000/);
+  await page.getByLabel('Event question').fill('Will Example Company publicly launch Product X before December 31?');
+  await page.getByLabel('YES means').fill('Product X is publicly available before the cutoff.');
+  await page.getByLabel('NO means').fill('Product X is not publicly available before the cutoff.');
+  await page.getByLabel('Resolution rules').fill('Resolve YES only if the official newsroom announces general availability before the exact cutoff. Resolve NO otherwise and INVALID only if the immutable rules cannot be applied.');
+  await page.getByLabel('Primary resolution source').fill('https://example.com/official-newsroom');
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Create market · 0.0006 ETH' }).click();
   await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
-
 test('creates an arbitrary Event market and warns about ambiguous rules', async ({ page }) => {
   await page.goto('/create');
   await connect(page);
-  await page.getByRole('button', { name: 'Event', exact: true }).click();
   await page.getByLabel('Event question').fill('Will it launch soon?');
   await expect(page.getByText('may be ambiguous')).toBeVisible();
   await page.getByLabel('Event question').fill('Will Example Company publicly launch Product X before December 31?');

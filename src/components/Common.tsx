@@ -48,7 +48,7 @@ export function timeRemaining(timestamp: number) {
   return `${Math.ceil(seconds / 60)}m remaining`;
 }
 export function MarketCard({ market }: { market: Market }) {
-  return <Link className="market-card" to={`/market/${market.address}`}><div className="card-top"><span className="asset-symbol">{market.marketType === 0 ? 'Ξ' : market.category.slice(0, 1).toUpperCase()}</span><span className="category-label">{market.category} · {market.marketType === 0 ? 'Automatic' : 'Event'}</span><ArrowUpRight size={17} /></div>
+  return <Link className="market-card" to={`/market/${market.address}`}><div className="card-top"><span className="asset-symbol">{market.category.slice(0, 1).toUpperCase()}</span><span className="category-label">{market.category} · Event</span><ArrowUpRight size={17} /></div>
     <h3>{market.question}</h3><div className="market-probability"><strong>{market.yesPrice || '—'}{market.yesPrice ? '%' : ''}</strong><span>YES · last trade</span></div>
     <div className="outcomes"><span className="yes">Yes <b>{market.yesPrice ? `${market.yesPrice}¢` : '—'}</b></span><span className="no">No <b>{market.yesPrice ? `${100 - market.yesPrice}¢` : '—'}</b></span></div>
     <div className="card-footer"><span>${money(market.volume)} vol.</span><span>{market.resolved ? `Resolved ${outcomeLabel(market.outcome)}` : timeRemaining(market.closesAt)}</span></div></Link>;

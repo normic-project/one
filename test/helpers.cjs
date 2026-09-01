@@ -3,8 +3,6 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 const UNIT = 1_000_000n;
 const FEE = ethers.parseEther('0.0006');
-const BOND = 25n * UNIT;
-const DISPUTE_PERIOD = 86_400;
 
 const eventMetadata = (overrides = {}) => ({
   question: 'Will the public launch occur before the stated resolution date?',
@@ -18,33 +16,23 @@ const eventMetadata = (overrides = {}) => ({
   ...overrides
 });
 
-async function deployMarketImplementations(deployer, token, autoResolver, resolverMultisig) {
+async function deployMarketImplementation(deployer, token, resolverMultisig) {
   const nonce = await deployer.getNonce();
-  const predictedFactory = ethers.getCreateAddress({ from: deployer.address, nonce: nonce + 2 });
+  const predictedFactory = ethers.getCreateAddress({ from: deployer.address, nonce: nonce + 1 });
   const predictedOrderBook = ethers.getCreateAddress({ from: predictedFactory, nonce: 2 });
-  const autoMarketImplementation = await ethers.deployContract('AutoMarket',
-    [token, predictedOrderBook, autoResolver], deployer);
   const eventMarketImplementation = await ethers.deployContract('EventMarket',
-    [token, predictedOrderBook, resolverMultisig, BOND, DISPUTE_PERIOD], deployer);
-  return { autoMarketImplementation, eventMarketImplementation, predictedFactory, predictedOrderBook };
+    [token, predictedOrderBook, resolverMultisig], deployer);
+  return { eventMarketImplementation, predictedFactory, predictedOrderBook };
 }
 
 async function fixture(tokenName = 'MockUSDG', treasuryOverride) {
   const [deployer, treasury, resolverSigner, creator, alice, bob, carol, dave] = await ethers.getSigners();
   const token = await ethers.deployContract(tokenName);
-  const weth = await ethers.deployContract('MockWETH');
-  const [token0, token1] = BigInt(weth.target) < BigInt(token.target)
-    ? [weth.target, token.target] : [token.target, weth.target];
-  const rawRatio = token0.toLowerCase() === weth.target.toLowerCase() ? 3000e6 / 1e18 : 1e18 / 3000e6;
-  const tick = Math.floor(Math.log(rawRatio) / Math.log(1.0001));
-  const pool = await ethers.deployContract('MockV3Pool', [token0, token1, 3000, tick]);
-  const autoResolver = await ethers.deployContract('UniswapTwapResolver', [weth.target, token.target, pool.target, 3600]);
-  const implementations = await deployMarketImplementations(deployer, token.target, autoResolver.target, resolverSigner.address);
+  const implementation = await deployMarketImplementation(deployer, token.target, resolverSigner.address);
   const factory = await ethers.deployContract('MarketFactory', [token.target, treasuryOverride || treasury.address,
-    autoResolver.target, resolverSigner.address, BOND, DISPUTE_PERIOD,
-    implementations.autoMarketImplementation.target, implementations.eventMarketImplementation.target]);
-  if (factory.target.toLowerCase() !== implementations.predictedFactory.toLowerCase() ||
-      (await factory.orderBook()).toLowerCase() !== implementations.predictedOrderBook.toLowerCase())
+    resolverSigner.address, implementation.eventMarketImplementation.target]);
+  if (factory.target.toLowerCase() !== implementation.predictedFactory.toLowerCase() ||
+      (await factory.orderBook()).toLowerCase() !== implementation.predictedOrderBook.toLowerCase())
     throw new Error('factory or order book prediction mismatch');
   const book = await ethers.getContractAt('OrderBook', await factory.orderBook());
   const feeVault = await ethers.getContractAt('FeeVault', await factory.feeVault());
@@ -57,7 +45,6 @@ async function fixture(tokenName = 'MockUSDG', treasuryOverride) {
   for (const trader of traders) {
     await token.mint(trader.address, 10_000_000n * UNIT);
     await token.connect(trader).approve(book.target, ethers.MaxUint256);
-    await token.connect(trader).approve(market.target, ethers.MaxUint256);
   }
 
   async function place(owner, yes, buy, price, shares, options = {}) {
@@ -79,22 +66,11 @@ async function fixture(tokenName = 'MockUSDG', treasuryOverride) {
     const resolvesAt = times.resolvesAt || latest + 3700;
     await factory.connect(owner).createEventMarket(closesAt, resolvesAt, metadata, { value: FEE });
     const address = await factory.markets((await factory.marketCount()) - 1n);
-    const event = await ethers.getContractAt('EventMarket', address);
-    for (const trader of traders) await token.connect(trader).approve(address, ethers.MaxUint256);
-    return { market: event, closesAt, resolvesAt, metadata };
+    return { market: await ethers.getContractAt('EventMarket', address), closesAt, resolvesAt, metadata };
   }
-  async function createAuto(owner = creator, overrides = {}) {
-    const latest = await time.latest();
-    const terms = { threshold: 3000n * UNIT, closesAt: latest + 3600, resolvesAt: latest + 3700,
-      condition: 0, ...overrides };
-    await factory.connect(owner).createAutoMarket(terms, { value: FEE });
-    const address = await factory.markets((await factory.marketCount()) - 1n);
-    return { market: await ethers.getContractAt('AutoMarket', address), terms };
-  }
-  return { deployer, treasury, resolverSigner, creator, alice, bob, carol, dave, traders, token, weth, pool,
-    autoResolver, autoMarketImplementation: implementations.autoMarketImplementation,
-    eventMarketImplementation: implementations.eventMarketImplementation,
-    factory, book, feeVault, market, collateral, eventTimes, place, pair, createEvent, createAuto };
+  return { deployer, treasury, resolverSigner, creator, alice, bob, carol, dave, traders, token,
+    eventMarketImplementation: implementation.eventMarketImplementation,
+    factory, book, feeVault, market, collateral, eventTimes, place, pair, createEvent };
 }
 
-module.exports = { fixture, eventMetadata, deployMarketImplementations, UNIT, FEE, BOND, DISPUTE_PERIOD };
+module.exports = { fixture, eventMetadata, deployMarketImplementation, UNIT, FEE };

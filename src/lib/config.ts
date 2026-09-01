@@ -1,7 +1,5 @@
 export const CHAIN_ID = 4663;
 export const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
-export const WETH = '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73';
-export const WETH_USDG_POOL = '0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca';
 export const EXPLORER = 'https://robinhoodchain.blockscout.com';
 export const RPC = import.meta.env.VITE_RH_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com';
 export const FACTORY = import.meta.env.VITE_FACTORY_ADDRESS || '';

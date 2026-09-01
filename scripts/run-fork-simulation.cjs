@@ -5,7 +5,7 @@ const { spawn } = require('node:child_process');
 
 const upstream = process.env.RH_RPC_URL;
 if (!upstream) throw new Error('RH_RPC_URL is required.');
-const forkBlock = process.env.FORK_BLOCK || '51198521';
+const forkBlock = process.env.FORK_BLOCK || String(require('../config/mainnet.json').forkBlock);
 
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 

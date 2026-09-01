@@ -15,16 +15,6 @@
         "internalType": "address",
         "name": "resolverMultisig_",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "proposalBond_",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint64",
-        "name": "disputePeriod_",
-        "type": "uint64"
       }
     ],
     "stateMutability": "nonpayable",
@@ -42,37 +32,12 @@
   },
   {
     "inputs": [],
-    "name": "DisputeWindowClosed",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "DisputeWindowOpen",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "InvalidAmount",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "InvalidEvidence",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "InvalidMetadata",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InvalidOutcome",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InvalidState",
     "type": "error"
   },
   {
@@ -91,22 +56,6 @@
     "type": "error"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "SafeERC20FailedOperation",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "SameParty",
-    "type": "error"
-  },
-  {
     "inputs": [],
     "name": "TradingClosed",
     "type": "error"
@@ -115,67 +64,6 @@
     "inputs": [],
     "name": "Unauthorized",
     "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "UnsupportedToken",
-    "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "proposer",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "disputer",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "outcome",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "proposerPayout",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "disputerPayout",
-        "type": "uint256"
-      }
-    ],
-    "name": "BondsSettled",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "resolver",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "outcome",
-        "type": "uint8"
-      }
-    ],
-    "name": "DisputeAdjudicated",
-    "type": "event"
   },
   {
     "anonymous": false,
@@ -238,86 +126,6 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "disputer",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "alternative",
-        "type": "uint8"
-      },
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "evidenceHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "evidence",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "bond",
-        "type": "uint256"
-      }
-    ],
-    "name": "OutcomeDisputed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "proposer",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "outcome",
-        "type": "uint8"
-      },
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "evidenceHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "evidence",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint64",
-        "name": "disputeDeadline",
-        "type": "uint64"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "bond",
-        "type": "uint256"
-      }
-    ],
-    "name": "OutcomeProposed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
         "name": "account",
         "type": "address"
       },
@@ -348,7 +156,7 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "enum IResolutionModule.Outcome",
+        "internalType": "enum IMarketTypes.Outcome",
         "name": "outcome",
         "type": "uint8"
       }
@@ -372,19 +180,6 @@
   {
     "inputs": [],
     "name": "MAX_CATEGORY_BYTES",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "MAX_EVIDENCE_BYTES",
     "outputs": [
       {
         "internalType": "uint256",
@@ -474,32 +269,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "finalOutcome",
-        "type": "uint8"
-      }
-    ],
-    "name": "adjudicate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "bondEscrowed",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "closesAt",
     "outputs": [
@@ -541,102 +310,6 @@
   {
     "inputs": [
       {
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "alternative",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "evidence",
-        "type": "string"
-      }
-    ],
-    "name": "dispute",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "disputeDeadline",
-    "outputs": [
-      {
-        "internalType": "uint64",
-        "name": "",
-        "type": "uint64"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "disputeEvidence",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "disputeEvidenceHash",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "disputePeriod",
-    "outputs": [
-      {
-        "internalType": "uint64",
-        "name": "",
-        "type": "uint64"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "disputedOutcome",
-    "outputs": [
-      {
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "disputer",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "account",
         "type": "address"
@@ -653,13 +326,6 @@
       }
     ],
     "name": "escrowShares",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "finalize",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -737,7 +403,7 @@
             "type": "string"
           }
         ],
-        "internalType": "struct IResolutionModule.Metadata",
+        "internalType": "struct IMarketTypes.Metadata",
         "name": "metadata_",
         "type": "tuple"
       }
@@ -778,20 +444,7 @@
     "name": "marketState",
     "outputs": [
       {
-        "internalType": "enum IResolutionModule.MarketState",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "marketType",
-    "outputs": [
-      {
-        "internalType": "enum IResolutionModule.MarketType",
+        "internalType": "enum IMarketTypes.MarketState",
         "name": "",
         "type": "uint8"
       }
@@ -846,7 +499,7 @@
             "type": "string"
           }
         ],
-        "internalType": "struct IResolutionModule.Metadata",
+        "internalType": "struct IMarketTypes.Metadata",
         "name": "",
         "type": "tuple"
       }
@@ -911,89 +564,6 @@
         "internalType": "bytes32",
         "name": "",
         "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "proposalBond",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "proposalEvidence",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "proposalEvidenceHash",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "outcome_",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "evidence",
-        "type": "string"
-      }
-    ],
-    "name": "propose",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "proposedOutcome",
-    "outputs": [
-      {
-        "internalType": "enum IResolutionModule.Outcome",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "proposer",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1098,6 +668,19 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "enum IMarketTypes.Outcome",
+        "name": "outcome_",
+        "type": "uint8"
+      }
+    ],
+    "name": "resolve",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "resolved",
     "outputs": [
@@ -1115,7 +698,7 @@
     "name": "resolvedOutcome",
     "outputs": [
       {
-        "internalType": "enum IResolutionModule.Outcome",
+        "internalType": "enum IMarketTypes.Outcome",
         "name": "",
         "type": "uint8"
       }
