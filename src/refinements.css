@@ -1,0 +1,15 @@
+/* Readable secondary text and persistent access to every main destination. */
+:root{--muted:#64748b}
+.hero p,.hero-assurance,.overview-strip small,.overview-strip strong>span,.strip-note>span,
+.eyebrow,.category-label,.market-probability span,.card-footer,.search,.crypto-filter,
+.tabs>button,.select-wrap select,.empty-state p,.principles p,.page-heading>p,.page-heading>div>p,
+.create-form input[readonly],.create-form textarea[readonly],.outcome-definition,.fee-summary>p,
+.fee-line,.aside-note,.market-meta,.chart-empty,.table-empty,.detail-section p,.details dt,
+.order-summary,.order-summary .sub,.matching-note,.metric>span,.portfolio-disclaimer,
+.creator-stats strong>span,.footer-top>a:not(.logo),.footer-top>.text-button,.footer-bottom,
+.modal>p,.claim-panel p,.back-link{color:#64748b}
+.notice{color:#526b8c}.hero-assurance,.card-footer,.overview-strip small,.principles p,.matching-note{font-size:11px}
+.footer-bottom{font-size:10px}.metric>span,.order-summary .sub{font-size:10px}.label-hint{color:#718096}
+@media(max-width:800px){.hero-assurance{font-size:9px}.overview-strip small{font-size:9px}.overview-strip strong>span{font-size:9px}.principles p{font-size:11px}}
+@media(max-width:560px){.header-inner nav a:nth-child(3){display:flex;font-size:0;gap:0}.header-inner nav a:nth-child(3) svg{display:block;width:16px;height:16px}.header-inner nav{gap:12px}.header-inner{gap:14px}.hero-assurance{font-size:8px}.overview-strip small{font-size:8px}.overview-strip strong>span{font-size:8px}.footer-bottom{font-size:9px}.metric>span{font-size:8px}}
+.market-type-select{margin:16px 0 24px}.market-type-select button{min-height:42px}.notice.warning{background:#fff9ed;border-color:#f0dfb7;color:#806631}.resolution-action{display:grid;gap:13px;margin-top:20px;padding-top:18px;border-top:1px solid #edf0f5}.resolution-action label{font-size:11px;color:#64748b}.resolution-action input,.resolution-action select{width:100%;margin-top:7px}.resolution-action .button{justify-self:start}.details dd{word-break:break-word}

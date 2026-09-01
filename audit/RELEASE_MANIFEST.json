@@ -1,0 +1,99 @@
+{
+  "project": "One Shot",
+  "releaseVersion": "1.0.0-preaudit",
+  "target": {
+    "chain": "Robinhood Chain Mainnet",
+    "chainId": 4663
+  },
+  "hashes": {
+    "frozenProductionContractSource": "sha256:6e85cda2cfac7c8a5c5d9814985d567f674bba54967593b0c270c02e49e29810",
+    "preAuditValidatedRelease": "sha256:e3f84c1448f78850c4ad5d3841148f359f46de4e6d959d9748b03fb5b1352d8c",
+    "packageJson": "sha256:4dc3c05687a4b676fa9c0dda4023e15de27846e2b686b2112480f6f2aba56c11",
+    "packageLock": "sha256:c369805535d8f9fb787621a5cef59737209401b388a865189db48ae1db20b469",
+    "hardhatConfig": "sha256:645a22011a79775e3d1f16cb1e45236d3d0d3408eba33ead5d6814b9f9bbcf38"
+  },
+  "compiler": {
+    "version": "0.8.28",
+    "longVersion": "0.8.28+commit.7893614a.Emscripten.clang",
+    "implementation": "solc-js pinned by package-lock.json and Hardhat compiler subtask",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200,
+      "details": "not explicitly overridden; solc 0.8.28 defaults"
+    },
+    "evmVersion": "paris",
+    "viaIR": {
+      "default": false,
+      "contracts/MarketFactory.sol": true
+    },
+    "metadata": {
+      "bytecodeHash": "ipfs",
+      "appendCBOR": true,
+      "useLiteralContent": false,
+      "source": "effective compiler metadata; defaults were not overridden"
+    },
+    "remappings": [],
+    "externalLibraryLinks": []
+  },
+  "dependencies": {
+    "lockfile": "package-lock.json",
+    "lockfileVersion": 3,
+    "solc": "0.8.28",
+    "hardhat": "2.29.1",
+    "openzeppelinContracts": "5.4.0",
+    "ethers": "6.17.0"
+  },
+  "git": {
+    "tag": "v1.0.0-preaudit",
+    "commit": "SELF: resolve with git rev-parse v1.0.0-preaudit^{commit}",
+    "tree": "SELF: resolve with git rev-parse v1.0.0-preaudit^{tree}",
+    "selfReferenceNote": "Literal commit/tree identifiers cannot be embedded in the commit they identify. audit:verify resolves and verifies the annotated tag instead."
+  },
+  "canonicalConfiguration": {
+    "usdg": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+    "usdgDecimals": 6,
+    "weth": "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+    "wethDecimals": 18,
+    "approvedWethUsdgPool": "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca",
+    "treasury": "0xDC2089B6fFF960007814F6e0D6D67E105a64624B",
+    "resolverSafe": "0x3203441F25934CA12E8b8Adf2be8F8e0AE389112",
+    "deployerPublicAddress": "0x4977DE14a88D3420FEfB19f454C0Be428176b559",
+    "twapWindowSeconds": 3600
+  },
+  "economics": {
+    "listingFeeWei": "600000000000000",
+    "listingFeeEth": "0.0006",
+    "totalTradeFeeBps": 100,
+    "protocolFeeBps": 40,
+    "creatorFeeBps": 60,
+    "proposalBondUsdgBaseUnits": "25000000",
+    "proposalBondUsdg": "25",
+    "disputePeriodSeconds": 86400,
+    "normalWinningSharePayoutUsdgBaseUnits": "1000000",
+    "invalidSharePayoutUsdgBaseUnits": "500000"
+  },
+  "globalContractSet": [
+    "AutoMarketImplementation",
+    "EventMarketImplementation",
+    "UniswapTwapResolver",
+    "MarketFactory",
+    "FeeVault (created by MarketFactory)",
+    "OrderBook (created by MarketFactory)"
+  ],
+  "perMarketContractModel": [
+    "one fixed EIP-1167 AutoMarket or EventMarket clone",
+    "one isolated CollateralVault created atomically during clone initialization"
+  ],
+  "bytecodeArtifactIndex": "audit/artifacts/index.json",
+  "latestValidatedDeploymentGas": "10281450",
+  "latestTests": {
+    "contracts": "40/40 PASS",
+    "browser": "16/16 PASS",
+    "forkLifecycles": "PASS",
+    "invariants": "PASS",
+    "dependencyAudit": "PASS"
+  },
+  "securityReviewStatus": "NOT COMPLETED",
+  "legalReviewStatus": "NOT COMPLETED",
+  "mainnetTransactionsBroadcast": 0
+}
