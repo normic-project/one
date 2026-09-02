@@ -225,7 +225,6 @@ test('portfolio shows open orders, positions, INVALID value and redemption', asy
 
 test('confirmed zero financial states render as zero without exposing the creator fee rate', async ({ page }) => {
   await page.goto('/creator');
-  await expect(page.locator('.claim-amount')).toHaveText('Connect wallet');
   await connect(page);
   await expect(page.locator('.claim-amount')).toHaveText('0.00USDG');
   await expect(page.locator('.creator-stats > div').filter({ hasText: 'Created markets' }).locator('strong')).toHaveText('0');
@@ -238,6 +237,21 @@ test('confirmed zero financial states render as zero without exposing the creato
   await page.getByRole('link', { name: 'Portfolio' }).click();
   await expect(page.locator('.metric-grid .metric strong')).toHaveText(['0.00 USDG', '0.00 USDG', '0.00 USDG']);
   await expect(page.locator('.metric-grid')).not.toContainText('—');
+});
+
+test('disconnected financial metrics render neutral zeroes without replacing the navbar connect action', async ({ page }) => {
+  await page.goto('/creator');
+  await expect(page.locator('.claim-amount')).toHaveText('0.00USDG');
+  await expect(page.locator('.creator-stats > div').filter({ hasText: 'Created markets' }).locator('strong')).toHaveText('0');
+  await expect(page.locator('.creator-stats > div').filter({ hasText: 'Total market volume' }).locator('strong')).toHaveText('$0.00');
+  await expect(page.locator('.creator-summary')).not.toContainText('Connect wallet');
+  await expect(page.getByRole('button', { name: 'Claim creator fees' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Connect wallet', exact: true }).first()).toBeVisible();
+
+  await page.goto('/portfolio');
+  await expect(page.locator('.metric-grid .metric strong')).toHaveText(['0.00 USDG', '0.00 USDG', '0.00 USDG']);
+  await expect(page.locator('.metric-grid')).not.toContainText('Connect wallet');
+  await expect(page.getByRole('button', { name: 'Connect wallet', exact: true }).first()).toBeVisible();
 });
 
 test('positive creator financial values render from the wallet summary', async ({ page }) => {

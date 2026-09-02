@@ -83,10 +83,10 @@ export default function PortfolioPage() {
   const pnl = value - cost;
   const escrow = orders.filter(order => order.buy).reduce((sum, order) => sum + order.remaining * BigInt(order.price) * 10100n, 0n);
   const financialValue = (amount: bigint, signed = false) => {
-    if (summaryState === 'idle') return 'Connect wallet';
-    if (summaryState !== 'success') return summaryState === 'error' || protocolError ? 'Unavailable' : 'Loading…';
-    const sign = signed && amount !== 0n ? amount > 0n ? '+' : '−' : '';
-    const magnitude = amount < 0n ? -amount : amount;
+    if (summaryState !== 'idle' && summaryState !== 'success') return summaryState === 'error' || protocolError ? 'Unavailable' : 'Loading…';
+    const displayAmount = summaryState === 'idle' ? 0n : amount;
+    const sign = signed && displayAmount !== 0n ? displayAmount > 0n ? '+' : '−' : '';
+    const magnitude = displayAmount < 0n ? -displayAmount : displayAmount;
     return <>{sign}{money(magnitude)}<span className="metric-unit"> USDG</span></>;
   };
 
