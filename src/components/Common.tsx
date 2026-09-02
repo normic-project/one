@@ -21,7 +21,7 @@ export function useTransaction(onSuccess?: () => Promise<void>) {
       setHash(tx.hash); setStatus('Transaction submitted. Waiting for confirmation…');
       const receipt = await tx.wait();
       if (!receipt || receipt.status !== 1) throw new Error('Transaction did not succeed.');
-      setStatus('Confirmed on Robinhood Chain.');
+      setStatus('Confirmed.');
       setConfirmed(true);
       if (onSuccess) {
         try { await onSuccess(); } catch (e) { setError(`Transaction confirmed, but data refresh failed: ${errorMessage(e)}`); }
@@ -37,7 +37,7 @@ export function EmptyState({ title, children, action }: { title: string; childre
 export function StatusBanner() {
   const state = useProtocol();
   if (state.error) return <div role="alert" className="notice danger"><AlertCircle size={17} /><span>{state.error}</span><button className="text-button" onClick={() => void state.refresh()}>Retry</button></div>;
-  if (!state.configured) return <div className="notice"><ShieldCheck size={17} /><span><strong>Mainnet build. Not deployed.</strong> This interface is connected to no trading contracts. Live transactions remain disabled until a verified deployment is configured.</span></div>;
+  if (!state.configured) return <div className="notice"><ShieldCheck size={17} /><span><strong>Trading unavailable.</strong> Live actions remain disabled until the service is fully configured.</span></div>;
   return null;
 }
 export function timeRemaining(timestamp: number) {

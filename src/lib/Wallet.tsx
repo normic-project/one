@@ -65,7 +65,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   async function signer() {
     if (!selected || !account) { setOpen(true); throw new Error('Connect your wallet to continue.'); }
     const actualChain = Number(await selected.request({ method: 'eth_chainId' }));
-    if (actualChain !== CHAIN_ID) throw new Error('Switch your wallet to Robinhood Chain mainnet first.');
+    if (actualChain !== CHAIN_ID) throw new Error('Switch your wallet to the supported network first.');
     return new BrowserProvider(selected, 'any').getSigner(account);
   }
   return <Context.Provider value={{ account, chainId, connect: () => { setOpen(true); setError(''); },
@@ -74,9 +74,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     {open && <div className="modal-backdrop" onClick={() => !pending && setOpen(false)}><section ref={dialog} className="modal" role="dialog" aria-modal="true" aria-labelledby="wallet-title" onClick={e => e.stopPropagation()}>
       <button className="icon-button close" aria-label="Close wallet dialog" onClick={() => setOpen(false)}><X size={20} /></button>
       <div className="modal-symbol"><WalletIcon size={27} /></div><h2 id="wallet-title">Your wallet. Your market.</h2>
-      <p>Connect an EVM wallet to trade with USDG on Robinhood Chain.</p>
+      <p>Connect a compatible wallet to trade with USDG.</p>
       {wallets.length ? wallets.map(wallet => <button className="wallet-option" disabled={pending} key={wallet.info.uuid} onClick={() => void connect(wallet)}><WalletIcon size={20} />{wallet.info.name}<ArrowUpRight size={18} /></button>) :
-        <div className="notice">No wallet detected. Install an EVM browser wallet such as MetaMask or Robinhood Wallet, then refresh this page.</div>}
+        <div className="notice">No compatible wallet detected. Install a supported browser wallet, then refresh this page.</div>}
       {error && <p role="alert" className="error">{error}</p>}
       <small>We never ask for your private key or seed phrase.</small>
     </section></div>}

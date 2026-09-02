@@ -9,6 +9,14 @@ export const ORDER_BOOK = import.meta.env.VITE_ORDER_BOOK_ADDRESS || '0x49E283E7
 export const TREASURY = import.meta.env.VITE_TREASURY_ADDRESS || '0xDC2089B6fFF960007814F6e0D6D67E105a64624B';
 export const RESOLVER_SAFE = import.meta.env.VITE_RESOLVER_SAFE_ADDRESS || '0x3203441F25934CA12E8b8Adf2be8F8e0AE389112';
 export const DEPLOYMENT_BLOCK = Number(import.meta.env.VITE_DEPLOYMENT_BLOCK || 51943083);
+function validExternalUrl(value: string | undefined) {
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+  } catch { return ''; }
+}
+export const SHOT_BUY_URL = validExternalUrl(import.meta.env.VITE_SHOT_BUY_URL);
 export const NETWORK = { chainId: '0x1237', chainName: 'Robinhood Chain',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: [RPC], blockExplorerUrls: [EXPLORER] };
 export const TOKEN_ABI = ['function approve(address,uint256) returns (bool)',

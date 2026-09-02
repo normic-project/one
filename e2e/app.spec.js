@@ -1,5 +1,9 @@
 const { test, expect } = require('@playwright/test');
 
+const DEFAULT_YES_OUTCOME = 'The market question resolves affirmatively according to the specified resolution source.';
+const DEFAULT_NO_OUTCOME = 'The market question resolves negatively according to the specified resolution source.';
+const DEFAULT_RULES = 'Resolve YES if the specified resolution source confirms the condition described in the market question. Resolve NO if the source confirms the condition did not occur. Resolve INVALID if the outcome cannot be objectively determined from the specified source.';
+
 test.beforeEach(async ({ page, request }) => {
   const fixture = await (await request.get('http://127.0.0.1:8547/fixture')).json();
   await page.addInitScript(({ account }) => {
@@ -29,6 +33,7 @@ async function connect(page) {
 
 test('home derives general-purpose categories and safely renders immutable event rules', async ({ page, request }) => {
   await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Buy $SHOT' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: /A market for/ })).toBeVisible();
   await expect(page.locator('.market-card').first()).toBeVisible();
   await expect(page.getByLabel('Market category')).toContainText('Politics');
@@ -52,19 +57,19 @@ test('buys YES and NO, sells a position, and cancels unmatched orders', async ({
   await page.getByRole('spinbutton', { name: 'Limit price', exact: true }).fill('53');
   await page.getByRole('spinbutton', { name: 'Number of shares', exact: true }).fill('7');
   await page.getByRole('button', { name: 'Buy YES · limit order' }).click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('Confirmed.')).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Cancel & reclaim', exact: true }).last().click();
   await page.getByRole('button', { name: 'No', exact: false }).last().click();
   await page.getByRole('spinbutton', { name: 'Limit price', exact: true }).fill('47');
   await page.getByRole('spinbutton', { name: 'Number of shares', exact: true }).fill('1');
   await page.getByRole('button', { name: 'Buy NO · limit order' }).click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('Confirmed.')).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Cancel & reclaim', exact: true }).last().click();
   await page.getByRole('button', { name: 'Yes', exact: false }).last().click();
   await page.getByRole('button', { name: 'Sell', exact: true }).click();
   await page.getByRole('spinbutton', { name: 'Number of shares', exact: true }).fill('1');
   await page.getByRole('button', { name: 'Sell YES · limit order' }).click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('Confirmed.')).toBeVisible({ timeout: 30000 });
 });
 
 test('portfolio shows open orders, positions, INVALID value and redemption', async ({ page }) => {
@@ -75,7 +80,7 @@ test('portfolio shows open orders, positions, INVALID value and redemption', asy
   await expect(page.getByText('INVALID · 0.5 USDG').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Redeem 0.5' }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Redeem 0.5' }).first().click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('Confirmed.')).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Orders' }).click();
   await expect(page.locator('tbody tr').first()).toBeVisible();
 });
@@ -108,30 +113,43 @@ test('shows resolver-only finalization and no deleted resolution controls', asyn
 
 test('creates a general event market through a real local contract transaction', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.getByRole('button', { name: 'Connect wallet to create' })).toBeVisible();
+  await expect(page.getByRole('checkbox')).toHaveCount(0);
+  await expect(page.getByLabel('YES meaning')).not.toBeVisible();
+  await page.getByText('Advanced resolution settings', { exact: true }).click();
+  await expect(page.getByLabel('YES meaning')).toHaveValue(DEFAULT_YES_OUTCOME);
+  await expect(page.getByLabel('NO meaning')).toHaveValue(DEFAULT_NO_OUTCOME);
+  await expect(page.getByLabel('Resolution rules')).toHaveValue(DEFAULT_RULES);
+  await expect(page.getByLabel('Secondary source · optional')).toHaveValue('');
+  await expect(page.getByLabel('Metadata URI · optional')).toHaveValue('');
+  await page.getByText('Advanced resolution settings', { exact: true }).click();
   await connect(page);
-  await page.getByLabel('Event question').fill('Will Example Company publicly launch Product X before December 31?');
-  await page.getByLabel('YES means').fill('Product X is publicly available before the cutoff.');
-  await page.getByLabel('NO means').fill('Product X is not publicly available before the cutoff.');
-  await page.getByLabel('Resolution rules').fill('Resolve YES only if the official newsroom announces general availability before the exact cutoff. Resolve NO otherwise and INVALID only if the immutable rules cannot be applied.');
-  await page.getByLabel('Primary resolution source').fill('https://example.com/official-newsroom');
-  await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Create market · 0.0006 ETH' }).click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
+  await page.getByLabel('Question').fill('Will Example Company publicly launch Product X before December 31?');
+  await page.getByLabel('Resolution source').fill('https://example.com/official-newsroom');
+  const resolutionDate = page.getByLabel('Resolution date');
+  const validResolutionDate = await resolutionDate.inputValue();
+  await resolutionDate.fill('2020-01-01T00:00');
+  await expect(page.getByText('Trading must close at least one minute from now.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create market' })).toBeDisabled();
+  await resolutionDate.fill(validResolutionDate);
+  await expect(page.getByRole('button', { name: 'Create market' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Create market' }).click();
+  await expect(page.getByText('Confirmed.')).toBeVisible({ timeout: 30000 });
+  await expect(page).toHaveURL(/\/market\/0x/, { timeout: 30000 });
+  await expect(page.getByText(DEFAULT_YES_OUTCOME, { exact: true })).toBeVisible();
+  await expect(page.getByText(DEFAULT_NO_OUTCOME, { exact: true })).toBeVisible();
+  await expect(page.getByText(DEFAULT_RULES, { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 test('creates an arbitrary Event market and warns about ambiguous rules', async ({ page }) => {
   await page.goto('/create');
   await connect(page);
-  await page.getByLabel('Event question').fill('Will it launch soon?');
+  await page.getByLabel('Question').fill('Will it launch soon?');
   await expect(page.getByText('may be ambiguous')).toBeVisible();
-  await page.getByLabel('Event question').fill('Will Example Company publicly launch Product X before December 31?');
-  await page.getByLabel('YES means').fill('Product X is publicly available before the cutoff.');
-  await page.getByLabel('NO means').fill('Product X is not publicly available before the cutoff.');
-  await page.getByLabel('Resolution rules').fill('Resolve YES only if the official newsroom announces general availability before the exact cutoff. Resolve NO otherwise and INVALID only if the immutable rules cannot be applied.');
-  await page.getByLabel('Primary resolution source').fill('https://example.com/official-newsroom');
-  await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Create market · 0.0006 ETH' }).click();
-  await expect(page.getByText('Confirmed on Robinhood Chain.')).toBeVisible({ timeout: 30000 });
+  await page.getByLabel('Question').fill('Will Example Company publicly launch Product X before December 31?');
+  await page.getByLabel('Resolution source').fill('https://example.com/official-newsroom');
+  await page.getByRole('button', { name: 'Create market' }).click();
+  await expect(page.getByText('Confirmed.')).toBeVisible({ timeout: 30000 });
   await page.goto('/creator');
   await expect(page.getByRole('heading', { name: 'Creator studio' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

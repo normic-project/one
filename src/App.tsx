@@ -10,6 +10,7 @@ import CreatePage from './pages/Create';
 import PortfolioPage from './pages/Portfolio';
 import CreatorPage from './pages/Creator';
 import { useDialog } from './lib/useDialog';
+import { SHOT_BUY_URL } from './lib/config';
 
 function Logo() { return <Link className="logo" to="/" aria-label="One Shot home"><span className="logo-mark"><i /><i /></span>one<span className="logo-light">shot</span><span className="logo-dot">.</span></Link>; }
 export default function App() {
@@ -18,12 +19,12 @@ export default function App() {
   const location = useLocation();
   return <><header className="header"><div className="header-inner"><Logo /><nav aria-label="Main navigation">
     <NavLink to="/" end><Compass size={17} />Explore</NavLink><NavLink to="/portfolio"><Layers3 size={17} />Portfolio</NavLink><NavLink to="/creator"><BarChart3 size={17} />Creator studio</NavLink></nav>
-    <div className="header-actions"><Link className="create-link" to="/create"><Plus size={17} />Create market</Link><WalletButton /></div></div></header>
+    <div className="header-actions">{SHOT_BUY_URL && <a className="button shot-buy" href={SHOT_BUY_URL} target="_blank" rel="noreferrer">Buy $SHOT <ArrowUpRight size={14} /></a>}<Link className="create-link" to="/create"><Plus size={17} />Create market</Link><WalletButton /></div></div></header>
     <main key={location.pathname} className="main"><Routes><Route path="/" element={<Home />} /><Route path="/market/:address" element={<MarketPage />} />
       <Route path="/create" element={<CreatePage />} /><Route path="/portfolio" element={<PortfolioPage />} /><Route path="/creator" element={<CreatorPage />} />
       <Route path="*" element={<EmptyState title="This page is off the board." action={<Link className="button primary" to="/">Explore markets</Link>}>The page you’re looking for doesn’t exist.</EmptyState>} /></Routes></main>
-    <footer><div className="footer-top"><Logo /><span>Conviction, onchain.</span><button className="text-button" onClick={() => setHelp(true)}><CircleHelp size={15} />How it works</button><a href="https://docs.robinhood.com/chain/" target="_blank" rel="noreferrer">Robinhood Chain <ArrowUpRight size={14} /></a><span className="network"><i />Mainnet · 4663</span></div>
-      <div className="footer-bottom"><span>Independent protocol. Not affiliated with or endorsed by Robinhood.</span><span>Trading involves risk. Shares can lose their entire value. No guaranteed exits.</span></div></footer>
+    <footer><div className="footer-top"><Logo /><span>Conviction, considered.</span><button className="text-button" onClick={() => setHelp(true)}><CircleHelp size={15} />How it works</button></div>
+      <div className="footer-bottom"><span>Independent market protocol.</span><span>Trading involves risk. Shares can lose their entire value. No guaranteed exits.</span></div></footer>
     {help && <div className="modal-backdrop" onClick={() => setHelp(false)}><section ref={dialog} className="modal help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={e => e.stopPropagation()}><button className="icon-button close" aria-label="Close help" onClick={() => setHelp(false)}><X size={20} /></button><span className="eyebrow">THE MECHANICS</span><h2 id="help-title">Two sides. Fully backed.</h2><ol><li><b>Choose your side.</b> Place a limit order in USDG. Unmatched orders stay open and cancellable.</li><li><b>Meet the other side.</b> A 60¢ YES buyer and a 40¢ NO buyer jointly lock exactly 1 USDG.</li><li><b>Follow immutable resolution.</b> After the stated date, the configured Resolver Safe selects YES, NO or INVALID under the market's immutable rules.</li></ol><div className="notice">Buyers pay a separate 1% trading fee: 0.4% to the treasury, 0.6% to the creator. INVALID outcomes pay 0.5 USDG per YES or NO share.</div><p>No market maker. No guaranteed liquidity. Verify every question, rule and source before trading.</p></section></div>}
   </>;
 }
@@ -44,10 +45,10 @@ function Home() {
     }), 250);
     return () => window.clearTimeout(timer);
   }, [filter, status, category, query, queryMarkets]);
-  return <><section className="hero"><div className="hero-copy"><div className="hero-tag"><span className="tiny-dot" />BUILT ON ROBINHOOD CHAIN <ArrowUpRight size={13} /></div>
+  return <><section className="hero"><div className="hero-copy"><div className="hero-tag"><span className="tiny-dot" />THE MARKETPLACE FOR CONVICTION</div>
     <h1>A market for<br />your <span>conviction.</span></h1><p>See what’s next. Take a position.<br />Trade real outcomes, with real skin in the game.</p>
     <div className="hero-buttons"><a className="button primary" href="#markets">Explore markets <ArrowRight size={16} /></a><Link className="button ghost" to="/create">Create a market <Plus size={16} /></Link></div>
-    <div className="hero-assurance"><ShieldCheck size={15} />Fully collateralized <span />No house liquidity <span />Onchain settlement</div></div>
+    <div className="hero-assurance"><ShieldCheck size={15} />Fully collateralized <span />No house liquidity <span />Transparent terms</div></div>
     <div className="hero-visual" aria-label="Matching illustration: 60 cents YES plus 40 cents NO backs one dollar of collateral"><div className="visual-grid" /><div className="orb orb-one" /><div className="orb orb-two" />
       <div className="illustration-caption"><span className="tiny-dot" />HOW MATCHING WORKS</div>
       <div className="floating-card no-card"><span className="mini-label">THE OTHER SIDE</span><strong>No<span>40¢</span></strong><div className="mini-bars"><i /><i /><i /><i /><i /><i /></div><span className="mini-bottom">A different perspective.</span></div>
