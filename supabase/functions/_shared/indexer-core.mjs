@@ -8,8 +8,12 @@ const interfaces = {
   factory: new Interface(FACTORY_ABI), book: new Interface(ORDER_BOOK_ABI),
   fees: new Interface(FEE_VAULT_ABI), market: new Interface(MARKET_ABI)
 };
-const eventTopics = [...new Set(Object.values(interfaces).flatMap(value => value.fragments
+const topicsFor = (...values) => [...new Set(values.flatMap(value => value.fragments
   .filter(fragment => fragment.type === 'event').map(fragment => value.getEvent(fragment.name).topicHash)))];
+const coreEventTopics = topicsFor(interfaces.factory, interfaces.book, interfaces.fees);
+const marketEventTopics = topicsFor(interfaces.market);
+const MAX_LOG_BLOCK_RANGE = 10;
+const MAX_PARALLEL_LOG_REQUESTS = 5;
 
 export const normalizeAddress = value => getAddress(value).toLowerCase();
 const lowerHash = value => String(value).toLowerCase();
@@ -33,14 +37,30 @@ async function retry(action, label, attempts = 5) {
   throw new Error(`${label}: ${last?.shortMessage || last?.message || last}`);
 }
 
-async function logsFor(provider, fromBlock, toBlock) {
+async function logsForRange(provider, fromBlock, toBlock, addresses, topics) {
   try {
-    return await retry(() => provider.getLogs({ fromBlock, toBlock, topics: [eventTopics] }), `logs ${fromBlock}-${toBlock}`, 3);
+    const address = addresses.length === 1 ? addresses[0] : addresses;
+    return await retry(() => provider.getLogs({ address, fromBlock, toBlock, topics: [topics] }), `logs ${fromBlock}-${toBlock}`, 3);
   } catch (error) {
     if (fromBlock === toBlock) throw error;
     const middle = Math.floor((fromBlock + toBlock) / 2);
-    return [...await logsFor(provider, fromBlock, middle), ...await logsFor(provider, middle + 1, toBlock)];
+    return [...await logsForRange(provider, fromBlock, middle, addresses, topics),
+      ...await logsForRange(provider, middle + 1, toBlock, addresses, topics)];
   }
+}
+
+async function logsFor(provider, fromBlock, toBlock, addresses, topics) {
+  const ranges = [];
+  for (let start = fromBlock; start <= toBlock; start += MAX_LOG_BLOCK_RANGE) {
+    ranges.push([start, Math.min(toBlock, start + MAX_LOG_BLOCK_RANGE - 1)]);
+  }
+  const logs = [];
+  for (let offset = 0; offset < ranges.length; offset += MAX_PARALLEL_LOG_REQUESTS) {
+    const group = ranges.slice(offset, offset + MAX_PARALLEL_LOG_REQUESTS);
+    const batches = await Promise.all(group.map(([start, end]) => logsForRange(provider, start, end, addresses, topics)));
+    logs.push(...batches.flat());
+  }
+  return logs;
 }
 
 async function blocksFor(provider, numbers) {
@@ -110,17 +130,23 @@ export async function runIndexer({ provider, store, confirmations = 32, batchSiz
   const fromBlock = last + 1;
   if (fromBlock > safeHead) return { status: 'caught_up', latest, safeHead, lastIndexedBlock: last, processedLogs: 0 };
   const toBlock = Math.min(safeHead, fromBlock + batchSize - 1);
-  const logs = (await logsFor(provider, fromBlock, toBlock)).sort((a,b) => a.blockNumber-b.blockNumber || a.index-b.index);
-  const blockMap = await blocksFor(provider, [...logs.map(log => log.blockNumber), toBlock]);
   const knownMarkets = new Set((await store.markets(CHAIN_ID)).map(normalizeAddress));
+  const coreLogs = await logsFor(provider, fromBlock, toBlock, [FACTORY, ORDER_BOOK, FEE_VAULT], coreEventTopics);
   const parsedFactory = [];
-  for (const log of logs.filter(log => normalizeAddress(log.address) === normalizeAddress(FACTORY))) {
+  for (const log of coreLogs.filter(log => normalizeAddress(log.address) === normalizeAddress(FACTORY))) {
     const parsed = interfaces.factory.parseLog(log);
     if (parsed?.name === 'MarketCreated') {
       knownMarkets.add(normalizeAddress(parsed.args.market));
       parsedFactory.push({ log, args: parsed.args });
     }
   }
+  const marketLogs = knownMarkets.size > 0
+    ? await logsFor(provider, fromBlock, toBlock, [...knownMarkets], marketEventTopics)
+    : [];
+  const logs = [...new Map([...coreLogs, ...marketLogs]
+    .map(log => [`${lowerHash(log.transactionHash)}:${log.index}`, log])).values()]
+    .sort((a,b) => a.blockNumber-b.blockNumber || a.index-b.index);
+  const blockMap = await blocksFor(provider, [...logs.map(log => log.blockNumber), toBlock]);
   const marketRows = [];
   for (const event of parsedFactory) marketRows.push(await loadMarketSnapshot(provider, event.args.market,
     { ...event, log: event.log }, blockMap.get(event.log.blockNumber)));

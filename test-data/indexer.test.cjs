@@ -45,11 +45,15 @@ class MemoryStore {
 }
 
 class FakeProvider {
-  constructor(logs, blocks, head) { this.logs=logs; this.blocks=blocks; this.head=head; }
+  constructor(logs, blocks, head) { this.logs=logs; this.blocks=blocks; this.head=head; this.logFilters=[]; }
   async getBlockNumber() { return this.head; }
   async getBlock(number) { return this.blocks.get(Number(number)) || null; }
-  async getLogs(filter) { return this.logs.filter(log => log.blockNumber >= filter.fromBlock && log.blockNumber <= filter.toBlock &&
-    filter.topics[0].includes(log.topics[0])); }
+  async getLogs(filter) {
+    this.logFilters.push(filter);
+    const addresses = new Set((Array.isArray(filter.address) ? filter.address : [filter.address]).map(value => value.toLowerCase()));
+    return this.logs.filter(log => log.blockNumber >= filter.fromBlock && log.blockNumber <= filter.toBlock &&
+      addresses.has(log.address.toLowerCase()) && filter.topics[0].includes(log.topics[0]));
+  }
 }
 
 test('historical indexing is resumable, idempotent, and repairs a short reorg', async () => {
@@ -84,6 +88,7 @@ test('historical indexing is resumable, idempotent, and repairs a short reorg', 
   while(result.status !== 'caught_up');
   assert.equal(store.table('markets').length,1); assert.equal(store.table('trades').length,1);
   assert.equal(store.table('indexed_logs').length,5); assert.equal(store.table('orders').find(row => row.order_id === '1').remaining,'7');
+  assert.ok(provider.logFilters.every(filter => filter.toBlock-filter.fromBlock < 10), 'RPC log ranges stay within the provider limit');
   const counts = Object.fromEntries([...store.tables].map(([name,rows]) => [name,rows.length]));
   result=await core.runIndexer({provider,store,confirmations:1,batchSize:2,reorgDepth:64,loadMarketSnapshot:snapshot});
   assert.equal(result.processedLogs,0);
