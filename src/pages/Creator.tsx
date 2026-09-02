@@ -69,9 +69,9 @@ export default function CreatorPage() {
   const summaryState: LoadState = !wallet.account ? 'idle' : loadedAccount === wallet.account ? loadState : 'loading';
   const placeholder = summaryState === 'error' || protocolError ? 'Unavailable' : 'Loading…';
   const totalVolume = markets.reduce((value, market) => value + market.volume, 0n);
-  const claimDisplay = summaryState === 'success' ? exactUsdg(claimable) : summaryState === 'idle' ? '—' : placeholder;
-  const createdDisplay = summaryState === 'success' ? String(markets.length) : summaryState === 'idle' ? '—' : placeholder;
-  const volumeDisplay = summaryState === 'success' ? `$${money(totalVolume)}` : summaryState === 'idle' ? '—' : placeholder;
+  const claimDisplay = summaryState === 'success' ? exactUsdg(claimable) : summaryState === 'idle' ? 'Connect wallet' : placeholder;
+  const createdDisplay = summaryState === 'success' ? String(markets.length) : summaryState === 'idle' ? 'Connect wallet' : placeholder;
+  const volumeDisplay = summaryState === 'success' ? `$${money(totalVolume)}` : summaryState === 'idle' ? 'Connect wallet' : placeholder;
 
   return <div className="page"><div className="page-heading heading-row"><div><span className="eyebrow">MAKE ROOM FOR A NEW PERSPECTIVE</span><h1>Creator studio</h1><p>Your markets. Your share of the action.</p></div><Link className="button primary" to="/create"><Plus size={16} />Create market</Link></div><StatusBanner />
     <div className="creator-summary"><div className="panel claim-panel"><span className="eyebrow">READY TO CLAIM</span><div className="claim-amount">{claimDisplay}{summaryState === 'success' && <span>USDG</span>}</div><p>Fees belong to you as soon as a trade settles.</p><button className="button primary" disabled={!protocol || !wallet.account || summaryState !== 'success' || claimable === 0n || tx.pending} onClick={() => void tx.run(async () => protocol!.fees.connect(await wallet.signer()).getFunction('claim')())}><ArrowDownToLine size={16} />{tx.pending ? 'Claiming…' : 'Claim creator fees'}</button>{tx.feedback}</div><div className="panel creator-stats"><div><small>Created markets</small><strong>{createdDisplay}</strong></div><div><small>Total market volume</small><strong>{volumeDisplay}</strong></div></div></div>

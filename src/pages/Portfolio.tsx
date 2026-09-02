@@ -21,8 +21,10 @@ export default function PortfolioPage() {
   const [error, setError] = useState('');
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [loadedAccount, setLoadedAccount] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [tab, setTab] = useState('Open positions');
   const requestVersion = useRef(0);
+  const refreshClickInFlight = useRef(false);
 
   const refresh = useCallback(async () => {
     const version = ++requestVersion.current;
@@ -64,6 +66,16 @@ export default function PortfolioPage() {
 
   useEffect(() => { void refresh(); }, [refresh]);
   const tx = useTransaction(refresh);
+  const handleRefresh = useCallback(async () => {
+    if (refreshClickInFlight.current) return;
+    refreshClickInFlight.current = true;
+    setIsRefreshing(true);
+    try { await refresh(); }
+    finally {
+      refreshClickInFlight.current = false;
+      setIsRefreshing(false);
+    }
+  }, [refresh]);
   const summaryState: LoadState = !wallet.account ? 'idle' : loadedAccount === wallet.account ? loadState : 'loading';
   const visible = positions.filter(position => position.market.resolved === (tab === 'Resolved positions'));
   const value = positions.reduce((sum, position) => sum + position.value, 0n);
@@ -71,14 +83,14 @@ export default function PortfolioPage() {
   const pnl = value - cost;
   const escrow = orders.filter(order => order.buy).reduce((sum, order) => sum + order.remaining * BigInt(order.price) * 10100n, 0n);
   const financialValue = (amount: bigint, signed = false) => {
-    if (summaryState === 'idle') return '—';
+    if (summaryState === 'idle') return 'Connect wallet';
     if (summaryState !== 'success') return summaryState === 'error' || protocolError ? 'Unavailable' : 'Loading…';
     const sign = signed && amount !== 0n ? amount > 0n ? '+' : '−' : '';
     const magnitude = amount < 0n ? -amount : amount;
     return <>{sign}{money(magnitude)}<span className="metric-unit"> USDG</span></>;
   };
 
-  return <div className="page"><div className="page-heading heading-row"><div><span className="eyebrow">YOUR CONVICTION, IN VIEW</span><h1>Portfolio</h1><p>Your positions, orders, and activity.</p></div><button className="button secondary" disabled={summaryState === 'loading'} onClick={() => void refresh()}><RefreshCw size={15} />Refresh</button></div><StatusBanner />
+  return <div className="page"><div className="page-heading heading-row"><div><span className="eyebrow">YOUR CONVICTION, IN VIEW</span><h1>Portfolio</h1><p>Your positions, orders, and activity.</p></div><button type="button" className="button secondary refresh-button" disabled={summaryState === 'loading' || isRefreshing} aria-busy={isRefreshing} onClick={() => void handleRefresh()}><RefreshCw className={isRefreshing ? 'spin' : ''} size={15} />Refresh</button></div><StatusBanner />
     <div className="metric-grid"><div className="panel metric"><small>Indicative position value</small><strong>{financialValue(value)}</strong><span>Based on last trades</span></div><div className="panel metric"><small>PnL vs net cash flow</small><strong className={summaryState === 'success' && pnl > 0n ? 'green' : summaryState === 'success' && pnl < 0n ? 'red' : ''}>{financialValue(pnl, true)}</strong><span>Includes fees and realized sale proceeds</span></div><div className="panel metric"><small>Open buy-order escrow</small><strong>{financialValue(escrow)}</strong><span>Includes refundable unearned fees</span></div></div>
     <section className="panel portfolio-panel"><div className="tabs">{['Open positions','Resolved positions','Orders','Activity'].map(value => <button className={tab === value ? 'active' : ''} onClick={() => setTab(value)} key={value}>{value}</button>)}</div>
       {error && <div className="notice danger" role="alert">Could not load account history: {error}. <button className="text-button" onClick={() => void refresh()}>Retry</button></div>}

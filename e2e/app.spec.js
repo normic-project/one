@@ -6,7 +6,8 @@ const DEFAULT_RULES = 'Resolve YES if the specified resolution source confirms t
 
 test.beforeEach(async ({ page, request }, testInfo) => {
   const fixture = await (await request.get('http://127.0.0.1:8547/fixture')).json();
-  const account = testInfo.title.includes('confirmed zero financial states') ? fixture.emptyAccount : fixture.account;
+  const account = testInfo.title.includes('confirmed zero financial states') ? fixture.emptyAccount
+    : testInfo.title.includes('positive creator financial values') ? fixture.creatorAccount : fixture.account;
   await page.addInitScript(({ account }) => {
     const listeners = {};
     window.ethereum = {
@@ -93,7 +94,7 @@ test('portfolio shows open orders, positions, INVALID value and redemption', asy
 
 test('confirmed zero financial states render as zero without exposing the creator fee rate', async ({ page }) => {
   await page.goto('/creator');
-  await expect(page.locator('.claim-amount')).toHaveText('—');
+  await expect(page.locator('.claim-amount')).toHaveText('Connect wallet');
   await connect(page);
   await expect(page.locator('.claim-amount')).toHaveText('0.00USDG');
   await expect(page.locator('.creator-stats > div').filter({ hasText: 'Created markets' }).locator('strong')).toHaveText('0');
@@ -101,9 +102,65 @@ test('confirmed zero financial states render as zero without exposing the creato
   await expect(page.getByText('Your fee rate', { exact: true })).toHaveCount(0);
   await expect(page.getByText('of matched notional', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Claim creator fees' })).toBeDisabled();
+  await expect(page.locator('.creator-summary')).not.toContainText('—');
 
   await page.getByRole('link', { name: 'Portfolio' }).click();
   await expect(page.locator('.metric-grid .metric strong')).toHaveText(['0.00 USDG', '0.00 USDG', '0.00 USDG']);
+  await expect(page.locator('.metric-grid')).not.toContainText('—');
+});
+
+test('positive creator financial values render from the wallet summary', async ({ page }) => {
+  await page.goto('/creator');
+  await connect(page);
+  await expect(page.locator('.claim-amount')).toHaveText(/^[1-9][\d,.]*\.\d{2,6}USDG$/);
+  await expect(page.getByRole('button', { name: 'Claim creator fees' })).toBeEnabled();
+  await expect(page.locator('.creator-stats > div').filter({ hasText: 'Created markets' }).locator('strong')).not.toHaveText('0');
+  await expect(page.locator('.creator-stats > div').filter({ hasText: 'Total market volume' }).locator('strong')).not.toHaveText('$0.00');
+});
+
+test('Refresh spins, blocks duplicate clicks, and settles after success', async ({ page }) => {
+  await page.goto('/portfolio');
+  await connect(page);
+  const button = page.getByRole('button', { name: 'Refresh' });
+  await expect(button).toBeEnabled();
+
+  let releaseRefresh;
+  const refreshGate = new Promise(resolve => { releaseRefresh = resolve; });
+  let requestCount = 0;
+  await page.route('**/api/wallet/**', async route => {
+    requestCount += 1;
+    await refreshGate;
+    await route.continue();
+  });
+  await button.evaluate(element => { element.click(); element.click(); });
+  await expect(button).toHaveAttribute('aria-busy', 'true');
+  await expect(button).toBeDisabled();
+  await expect(button.locator('svg')).toHaveClass(/spin/);
+  await expect(button.locator('svg')).toHaveCSS('animation-name', 'spin');
+  await expect.poll(() => requestCount).toBe(3);
+  releaseRefresh();
+  await expect(button).toHaveAttribute('aria-busy', 'false');
+  await expect(button).toBeEnabled();
+  await expect(button.locator('svg')).not.toHaveClass(/spin/);
+  expect(requestCount).toBe(3);
+});
+
+test('Refresh stops spinning and restores its guard after failure', async ({ page }) => {
+  await page.goto('/portfolio');
+  await connect(page);
+  const button = page.getByRole('button', { name: 'Refresh' });
+  await page.route('**/api/wallet/**', async route => {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Refresh failed' }) });
+  });
+  await button.click();
+  await expect(button).toHaveAttribute('aria-busy', 'true');
+  await expect(button.locator('svg')).toHaveClass(/spin/);
+  await expect(button).toHaveAttribute('aria-busy', 'false');
+  await expect(button).toBeEnabled();
+  await expect(button.locator('svg')).not.toHaveClass(/spin/);
+  await expect(page.locator('.metric-grid .metric strong')).toHaveText(['Unavailable', 'Unavailable', 'Unavailable']);
+  await expect(page.getByRole('alert').filter({ hasText: 'Refresh failed' })).toBeVisible();
 });
 
 test('wallet API failures remain unavailable instead of becoming financial zeroes', async ({ page }) => {
