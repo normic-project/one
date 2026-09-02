@@ -33,6 +33,9 @@ async function connect(page) {
 
 test('home derives general-purpose categories and safely renders immutable event rules', async ({ page, request }) => {
   await page.goto('/');
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.png?v=2');
+  await expect(page.locator('.logo-mark')).toHaveCount(2);
+  expect(await page.locator('.logo-mark').evaluateAll(marks => marks.every(mark => mark.getAttribute('src') === '/one-shot-mark.png'))).toBe(true);
   await expect(page.getByRole('button', { name: 'Buy $SHOT' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Buy $SHOT' })).toBeDisabled();
   await expect(page.getByRole('link', { name: 'Buy $SHOT' })).toHaveCount(0);

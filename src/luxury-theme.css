@@ -41,7 +41,8 @@ textarea:focus { outline: 2px solid rgba(110, 31, 42, .42); outline-offset: 1px;
 .logo { color: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-weight: 600; letter-spacing: -.055em; }
 .logo-light { font-weight: 400; }
 .logo-dot { color: var(--champagne); }
-.logo-mark i { background: var(--accent); border-radius: 1px; }
+.logo-mark { position: static; display: block; flex: 0 0 auto; width: 29px; height: 31px; margin-right: 10px; object-fit: contain; transform: none; }
+.footer-top .logo-mark { width: 23px; height: 25px; margin-right: 6px; transform: none; }
 nav a { color: var(--secondary); }
 nav a:hover,
 nav a.active { color: var(--accent); }
@@ -237,7 +238,7 @@ footer { color: var(--secondary); }
 @media (max-width: 560px) {
   .header-inner { padding: 0 12px; gap: 10px; }
   .header-inner .logo { font-size: 20px; }
-  .header-inner .logo-mark { display: none; }
+  .header-inner .logo-mark { display: block; width: 20px; height: 22px; margin-right: 5px; }
   .header-inner nav { gap: 9px; }
   .header-inner nav a { font-size: 9px; }
   .header-actions { gap: 5px; }

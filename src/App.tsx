@@ -12,7 +12,7 @@ import CreatorPage from './pages/Creator';
 import { useDialog } from './lib/useDialog';
 import { SHOT_BUY_URL } from './lib/config';
 
-function Logo() { return <Link className="logo" to="/" aria-label="One Shot home"><span className="logo-mark"><i /><i /></span>one<span className="logo-light">shot</span><span className="logo-dot">.</span></Link>; }
+function Logo() { return <Link className="logo" to="/" aria-label="One Shot home"><img className="logo-mark" src="/one-shot-mark.png" alt="" aria-hidden="true" width="29" height="31" />one<span className="logo-light">shot</span><span className="logo-dot">.</span></Link>; }
 export default function App() {
   const [help, setHelp] = useState(false);
   const dialog = useDialog(help, () => setHelp(false));
