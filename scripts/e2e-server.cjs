@@ -181,6 +181,7 @@ async function main() {
   process.env.VITE_FEE_VAULT_ADDRESS = await factory.feeVault();
   process.env.VITE_RESOLVER_SAFE_ADDRESS = signers[7].address;
   process.env.VITE_TREASURY_ADDRESS = signers[1].address;
+  process.env.VITE_WALLETCONNECT_PROJECT_ID = '11111111111111111111111111111111';
   const viteApi = await import('vite');
   const proxy = { '/api': 'http://127.0.0.1:8547' };
   let vite;

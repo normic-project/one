@@ -51,6 +51,8 @@ npm run deploy -- --broadcast
 
 There is no testnet, skip-checks, force, or private-key argument. Do not put secrets in `VITE_*` variables.
 
+Mobile wallet connections use WalletConnect v2. Create a browser-client project in the Reown dashboard, restrict its origin allowlist to the deployed One Shot domains, and set its public identifier as `VITE_WALLETCONNECT_PROJECT_ID` in the frontend deployment environment. This identifier is intentionally browser-visible; deployer keys, managed RPC credentials, and server credentials must never be placed in it or any other `VITE_*` value.
+
 ## Production data layer
 
 Supabase stores a replayable, read-only index of canonical contract events. The schema and reorg-safe derived-state procedures live in `supabase/migrations`. A Supabase Edge Function reads Robinhood Chain in bounded batches, starts at block 51943083, waits 32 confirmations, and is scheduled every minute with `pg_cron` and `pg_net`. Run it locally with `npm run indexer:once`, `npm run indexer:backfill`, or `npm run indexer:reindex` using server-only credentials.

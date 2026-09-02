@@ -8,15 +8,32 @@ test.beforeEach(async ({ page, request }, testInfo) => {
   const fixture = await (await request.get('http://127.0.0.1:8547/fixture')).json();
   const account = testInfo.title.includes('confirmed zero financial states') ? fixture.emptyAccount
     : testInfo.title.includes('positive creator financial values') ? fixture.creatorAccount : fixture.account;
-  await page.addInitScript(({ account }) => {
+  const standardMobile = testInfo.title.includes('normal mobile browser');
+  const rejectConnection = testInfo.title.includes('rejected wallet connection');
+  const bitget = testInfo.title.includes('Bitget injected wallet');
+  await page.addInitScript(({ account, standardMobile, rejectConnection, bitget }) => {
     const listeners = {};
-    window.ethereum = {
+    const testState = { disconnects: 0, switches: 0, addChainCalls: 0 };
+    let activeChain = window.location.search.includes('wrong-network') || window.location.search.includes('missing-network') ? '0x1' : '0x1237';
+    let chainAdded = !window.location.search.includes('missing-network');
+    const provider = {
       on(event, listener) { listeners[event] = listener; },
       removeListener(event) { delete listeners[event]; },
       async request({ method, params }) {
-        if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [account];
-        if (method === 'eth_chainId' && window.location.search.includes('wrong-network')) return '0x1';
-        if (method === 'wallet_switchEthereumChain') return null;
+        if (method === 'eth_requestAccounts') {
+          if (rejectConnection) throw Object.assign(new Error('User rejected the request.'), { code: 4001 });
+          return [account];
+        }
+        if (method === 'eth_accounts') return [account];
+        if (method === 'eth_chainId') return activeChain;
+        if (method === 'wallet_switchEthereumChain') {
+          testState.switches += 1;
+          if (!chainAdded) throw Object.assign(new Error('Unknown chain.'), { code: 4902 });
+          activeChain = params[0].chainId;
+          listeners.chainChanged?.(activeChain);
+          return null;
+        }
+        if (method === 'wallet_addEthereumChain') { chainAdded = true; testState.addChainCalls += 1; return null; }
         const response = await fetch('http://127.0.0.1:8547', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params: params || [] }) });
         const data = await response.json();
@@ -24,7 +41,23 @@ test.beforeEach(async ({ page, request }, testInfo) => {
         return data.result;
       }
     };
-  }, { account });
+    window.__walletTest = testState;
+    if (standardMobile) {
+      window.__ONE_SHOT_WALLETCONNECT_PROVIDER__ = {
+        ...provider,
+        session: { topic: 'test-walletconnect-session' },
+        enable: async () => [account],
+        disconnect: async () => { testState.disconnects += 1; listeners.disconnect?.({ code: 4900 }); },
+      };
+    } else {
+      window.ethereum = provider;
+      if (bitget) {
+        window.addEventListener('eip6963:requestProvider', () => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', {
+          detail: { info: { uuid: 'bitget-test', name: 'Bitget Wallet', icon: '', rdns: 'com.bitget.web3' }, provider },
+        })));
+      }
+    }
+  }, { account, standardMobile, rejectConnection, bitget });
 });
 
 async function connect(page) {
@@ -32,6 +65,76 @@ async function connect(page) {
   await page.getByRole('button', { name: 'Browser wallet' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 }
+
+test('desktop injected wallet remains available alongside QR connection', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop injected-wallet coverage.');
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect wallet', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Browser wallet' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mobile wallet or QR code' })).toBeVisible();
+  await page.getByRole('button', { name: 'Browser wallet' }).click();
+  await expect(page.getByRole('button', { name: 'Disconnect wallet' })).toBeVisible();
+});
+
+test('mobile injected DApp browser connects through its EIP-1193 provider', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Mobile DApp-browser coverage.');
+  await page.goto('/');
+  await connect(page);
+  await expect(page.getByRole('button', { name: 'Disconnect wallet' })).toBeVisible();
+});
+
+test('normal mobile browser connects and restores a WalletConnect session', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Ordinary mobile-browser coverage.');
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect wallet', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Browser wallet' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mobile wallet or QR code' }).click();
+  await expect(page.getByRole('button', { name: 'Disconnect wallet' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('one-shot:walletconnect-session'))).toBe('active');
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Disconnect wallet' })).toBeVisible();
+  await page.getByRole('button', { name: 'Disconnect wallet' }).click();
+  await expect(page.getByRole('button', { name: 'Connect wallet', exact: true }).first()).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__walletTest.disconnects)).toBe(1);
+});
+
+test('injected wallet disconnects and reconnects cleanly', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Single-project reconnect coverage.');
+  await page.goto('/');
+  await connect(page);
+  await page.getByRole('button', { name: 'Disconnect wallet' }).click();
+  await expect(page.getByRole('button', { name: 'Connect wallet', exact: true }).first()).toBeVisible();
+  await connect(page);
+  await expect(page.getByRole('button', { name: 'Disconnect wallet' })).toBeVisible();
+});
+
+test('rejected wallet connection returns the selector to an interactive state', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Single-project rejection coverage.');
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect wallet', exact: true }).first().click();
+  const browserWallet = page.getByRole('button', { name: 'Browser wallet' });
+  await browserWallet.click();
+  await expect(page.getByRole('alert')).toHaveText('Connection request declined. Nothing was changed.');
+  await expect(browserWallet).toBeEnabled();
+});
+
+test('Bitget injected wallet is discovered through the standard provider interface', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect wallet', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Bitget Wallet' }).click();
+  await expect(page.getByRole('button', { name: 'Disconnect wallet' })).toBeVisible();
+});
+
+test('unknown network is added and switched through the existing wallet flow', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Single-project network-add coverage.');
+  await page.goto('/?missing-network=1');
+  await connect(page);
+  await page.getByRole('button', { name: 'Switch network' }).click();
+  await expect(page.getByRole('button', { name: 'Switch network' })).toHaveCount(0);
+  expect(await page.evaluate(() => window.__walletTest.addChainCalls)).toBe(1);
+  expect(await page.evaluate(() => window.__walletTest.switches)).toBe(2);
+});
 
 test('home derives general-purpose categories and safely renders immutable event rules', async ({ page, request }) => {
   await page.goto('/');

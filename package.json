@@ -8,6 +8,7 @@
   },
   "overrides": {
     "adm-zip": "0.6.0",
+    "axios": "1.20.0",
     "undici": "6.28.0",
     "serialize-javascript": "7.0.5",
     "tmp": "0.2.7",
@@ -43,6 +44,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "5.4.0",
     "@supabase/supabase-js": "2.112.4",
+    "@walletconnect/ethereum-provider": "2.24.0",
     "ethers": "6.17.0",
     "lucide-react": "0.468.0",
     "react": "19.1.1",
