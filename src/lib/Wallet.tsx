@@ -6,14 +6,14 @@ import { CHAIN_ID, NETWORK } from './config';
 import { errorMessage, short } from './chain';
 import { enableWalletConnect, getWalletConnectProvider, walletConnectConfigured } from './walletConnect';
 import type { RemoteWalletProvider } from './walletConnect';
-import { Wallet as WalletIcon, X, ArrowUpRight, QrCode } from 'lucide-react';
+import { Wallet as WalletIcon, X, ArrowUpRight } from 'lucide-react';
 import { useDialog } from './useDialog';
 
 type Injected = Eip1193Provider & {
   on?: (event: string, listener: (...args: unknown[]) => void) => void;
   removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
 };
-type WalletDetail = { info: { uuid: string; name: string; icon: string }; provider: Injected };
+type WalletDetail = { info: { uuid: string; name: string; icon: string; rdns?: string }; provider: Injected };
 type SelectedWallet = { provider: Injected; kind: 'injected' | 'walletconnect' };
 type WalletState = { account: string; chainId: number; connect: () => void; disconnect: () => void;
   signer: () => Promise<JsonRpcSigner>; switchNetwork: () => Promise<void> };
@@ -40,6 +40,16 @@ function connectionErrorMessage(cause: unknown) {
   return errorMessage(cause);
 }
 
+function safeWalletIcon(icon: string) {
+  if (icon.startsWith('data:image/')) return icon;
+  try {
+    const url = new URL(icon);
+    return url.protocol === 'https:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [wallets, setWallets] = useState<WalletDetail[]>([]);
   const [selected, setSelected] = useState<SelectedWallet | null>(null);
@@ -53,7 +63,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const announce = (event: Event) => {
       const detail = (event as CustomEvent<WalletDetail>).detail;
-      setWallets(current => current.some(wallet => wallet.info.uuid === detail.info.uuid) ? current : [...current, detail]);
+      setWallets(current => {
+        if (current.some(wallet => wallet.info.uuid === detail.info.uuid)) return current;
+        const withoutGenericDuplicate = current.filter(wallet => wallet.info.uuid !== 'injected' || wallet.provider !== detail.provider);
+        return [...withoutGenericDuplicate, detail];
+      });
     };
     window.addEventListener('eip6963:announceProvider', announce);
     window.dispatchEvent(new Event('eip6963:requestProvider'));
@@ -165,15 +179,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return new BrowserProvider(selected.provider, 'any').getSigner(account);
   }
 
+  const openWalletPicker = useCallback(() => {
+    setError('');
+    if (wallets.length === 0 && walletConnectConfigured) {
+      void connectRemote();
+      return;
+    }
+    setOpen(true);
+  }, [connectRemote, wallets.length]);
+
   const hasWalletOption = wallets.length > 0 || walletConnectConfigured;
-  return <Context.Provider value={{ account, chainId, connect: () => { setOpen(true); setError(''); }, disconnect, signer, switchNetwork }}>
+  return <Context.Provider value={{ account, chainId, connect: openWalletPicker, disconnect, signer, switchNetwork }}>
     {children}
     {open && <div className="modal-backdrop" onClick={() => !pending && setOpen(false)}><section ref={dialog} className="modal" role="dialog" aria-modal="true" aria-labelledby="wallet-title" onClick={event => event.stopPropagation()}>
       <button className="icon-button close" aria-label="Close wallet dialog" disabled={pending} onClick={() => setOpen(false)}><X size={20} /></button>
       <div className="modal-symbol"><WalletIcon size={27} /></div><h2 id="wallet-title">Your wallet. Your market.</h2>
-      <p>Choose a compatible wallet. Mobile connections open your wallet app; desktop connections can use a QR code.</p>
-      {wallets.map(wallet => <button className="wallet-option" disabled={pending} key={wallet.info.uuid} onClick={() => void connectInjected(wallet)}><WalletIcon size={20} />{wallet.info.name}<ArrowUpRight size={18} /></button>)}
-      {walletConnectConfigured && <button className="wallet-option" disabled={pending} onClick={() => void connectRemote()}><QrCode size={20} />Mobile wallet or QR code<ArrowUpRight size={18} /></button>}
+      <p>Choose a wallet to continue.</p>
+      {wallets.map(wallet => {
+        const icon = safeWalletIcon(wallet.info.icon);
+        return <button className="wallet-option" disabled={pending} key={wallet.info.uuid} onClick={() => void connectInjected(wallet)}>
+          <span className="wallet-option-icon">{icon ? <img src={icon} alt="" /> : <WalletIcon size={20} />}</span>
+          <span className="wallet-option-copy"><strong>{wallet.info.name}</strong><small>Installed</small></span>
+          <ArrowUpRight size={18} />
+        </button>;
+      })}
+      {walletConnectConfigured && <button className="wallet-more" disabled={pending} onClick={() => void connectRemote()}>More wallets<ArrowUpRight size={16} /></button>}
       {!hasWalletOption && <div className="notice">No compatible wallet was detected. Open this page inside a wallet app, or try again when mobile wallet connections are available.</div>}
       {error && <p role="alert" className="error">{error}</p>}
       <small>We never ask for your private key or seed phrase.</small>
