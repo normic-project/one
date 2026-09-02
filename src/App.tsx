@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, BarChart3, ChevronDown, CircleHelp, Compass, Layers3, Plus, Search, ShieldCheck, Sparkles, TrendingUp, X } from 'lucide-react';
+import { ArrowUpRight, BarChart3, ChevronDown, CircleHelp, Compass, Layers3, Plus, Search, ShieldCheck, Sparkles, TrendingUp, X } from 'lucide-react';
 import { WalletButton } from './lib/Wallet';
 import { useProtocol } from './lib/Protocol';
 import { money } from './lib/chain';
@@ -22,7 +22,7 @@ export default function App() {
     <div className="header-actions">{SHOT_BUY_URL
       ? <a className="button shot-buy" href={SHOT_BUY_URL} target="_blank" rel="noopener noreferrer">Buy $SHOT <ArrowUpRight size={14} /></a>
       : <button className="button shot-buy" type="button" disabled>Buy $SHOT <ArrowUpRight size={14} /></button>}
-      <Link className="create-link" to="/create"><Plus size={17} />Create market</Link><WalletButton /></div></div></header>
+      <WalletButton /></div></div></header>
     <main key={location.pathname} className="main"><Routes><Route path="/" element={<Home />} /><Route path="/market/:address" element={<MarketPage />} />
       <Route path="/create" element={<CreatePage />} /><Route path="/portfolio" element={<PortfolioPage />} /><Route path="/creator" element={<CreatorPage />} />
       <Route path="*" element={<EmptyState title="This page is off the board." action={<Link className="button primary" to="/">Explore markets</Link>}>The page you’re looking for doesn’t exist.</EmptyState>} /></Routes></main>
@@ -50,7 +50,7 @@ function Home() {
   }, [filter, status, category, query, queryMarkets]);
   return <><section className="hero"><div className="hero-copy"><div className="hero-tag"><span className="tiny-dot" />THE MARKETPLACE FOR CONVICTION</div>
     <h1>A market for<br />your <span>conviction.</span></h1><p>See what’s next. Take a position.<br />Trade real outcomes, with real skin in the game.</p>
-    <div className="hero-buttons"><a className="button primary" href="#markets">Explore markets <ArrowRight size={16} /></a><Link className="button ghost" to="/create">Create a market <Plus size={16} /></Link></div>
+    <div className="hero-buttons"><Link className="button primary" to="/create">Create a market <Plus size={16} /></Link></div>
     <div className="hero-assurance"><ShieldCheck size={15} />Fully collateralized <span />No house liquidity <span />Transparent terms</div></div>
     <div className="hero-visual" aria-label="Matching illustration: 60 cents YES plus 40 cents NO backs one dollar of collateral"><div className="visual-grid" /><div className="orb orb-one" /><div className="orb orb-two" />
       <div className="illustration-caption"><span className="tiny-dot" />HOW MATCHING WORKS</div>
