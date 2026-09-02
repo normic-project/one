@@ -219,6 +219,7 @@ td { color: var(--secondary); border-color: rgba(216, 207, 197, .65); }
 .claim-amount > span,
 .claim-panel p,
 .creator-stats strong > span { color: var(--secondary); }
+.metric-unit { font: 400 .38em 'DM Sans', sans-serif; letter-spacing: 0; color: var(--secondary); }
 
 .modal-backdrop { background: rgba(23, 20, 20, .48); backdrop-filter: none; }
 .wallet-option:hover { color: var(--accent); border-color: var(--champagne); background: var(--surface); }

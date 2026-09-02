@@ -4,8 +4,9 @@ const DEFAULT_YES_OUTCOME = 'The market question resolves affirmatively accordin
 const DEFAULT_NO_OUTCOME = 'The market question resolves negatively according to the specified resolution source.';
 const DEFAULT_RULES = 'Resolve YES if the specified resolution source confirms the condition described in the market question. Resolve NO if the source confirms the condition did not occur. Resolve INVALID if the outcome cannot be objectively determined from the specified source.';
 
-test.beforeEach(async ({ page, request }) => {
+test.beforeEach(async ({ page, request }, testInfo) => {
   const fixture = await (await request.get('http://127.0.0.1:8547/fixture')).json();
+  const account = testInfo.title.includes('confirmed zero financial states') ? fixture.emptyAccount : fixture.account;
   await page.addInitScript(({ account }) => {
     const listeners = {};
     window.ethereum = {
@@ -22,7 +23,7 @@ test.beforeEach(async ({ page, request }) => {
         return data.result;
       }
     };
-  }, fixture);
+  }, { account });
 });
 
 async function connect(page) {
@@ -88,6 +89,34 @@ test('portfolio shows open orders, positions, INVALID value and redemption', asy
   await expect(page.getByText('Confirmed.')).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Orders' }).click();
   await expect(page.locator('tbody tr').first()).toBeVisible();
+});
+
+test('confirmed zero financial states render as zero without exposing the creator fee rate', async ({ page }) => {
+  await page.goto('/creator');
+  await expect(page.locator('.claim-amount')).toHaveText('—');
+  await connect(page);
+  await expect(page.locator('.claim-amount')).toHaveText('0.00USDG');
+  await expect(page.locator('.creator-stats > div').filter({ hasText: 'Created markets' }).locator('strong')).toHaveText('0');
+  await expect(page.locator('.creator-stats > div').filter({ hasText: 'Total market volume' }).locator('strong')).toHaveText('$0.00');
+  await expect(page.getByText('Your fee rate', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('of matched notional', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Claim creator fees' })).toBeDisabled();
+
+  await page.getByRole('link', { name: 'Portfolio' }).click();
+  await expect(page.locator('.metric-grid .metric strong')).toHaveText(['0.00 USDG', '0.00 USDG', '0.00 USDG']);
+});
+
+test('wallet API failures remain unavailable instead of becoming financial zeroes', async ({ page }) => {
+  await page.route('**/api/wallet/**', async route => {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Indexed wallet data unavailable' }) });
+  });
+  await page.goto('/portfolio');
+  await connect(page);
+  await expect(page.locator('.metric-grid .metric strong').first()).toHaveText('Loading…');
+  await expect(page.locator('.metric-grid .metric strong')).toHaveText(['Unavailable', 'Unavailable', 'Unavailable']);
+  await expect(page.getByRole('alert').filter({ hasText: 'Indexed wallet data unavailable' })).toBeVisible();
+  await expect(page.locator('.metric-grid')).not.toContainText('0.00 USDG');
 });
 
 test('market pages render pending, YES, NO and INVALID event states', async ({ page, request }) => {

@@ -153,7 +153,7 @@ async function main() {
       response.writeHead(204); response.end(() => void close()); return;
     }
     if (request.url === '/fixture') {
-      response.end(JSON.stringify({ account: signers[3].address, market: open.target, pending: pending.target,
+      response.end(JSON.stringify({ account: signers[3].address, emptyAccount: signers[6].address, market: open.target, pending: pending.target,
         invalid: invalid.target, invalidSecond: invalidSecond.target, unsafeSource: unsafeSource.target,
         resolvedYes: resolvedYes.target, resolvedNo: resolvedNo.target, factory: factory.target }));
       return;
