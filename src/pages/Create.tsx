@@ -73,6 +73,6 @@ export default function CreatePage() {
       </div></details>
       <p className="permanence-note">Market terms are permanent after creation.</p>
       {tx.feedback}<button className="button primary full" disabled={!protocol || !complete || !validTimeline || tx.pending || (!!wallet.account && wallet.chainId !== CHAIN_ID)} type={wallet.account ? 'submit' : 'button'} onClick={wallet.account ? undefined : wallet.connect}>{tx.pending ? 'Waiting for confirmation…' : wallet.account ? 'Create market' : 'Connect wallet to create'}<ArrowRight size={16} /></button>
-    </form><aside><div className="panel fee-summary"><div className="summary-icon"><Plus size={24} /></div><h2>Create a market</h2><p>No liquidity deposit required.</p><div className="fee-line"><span>Listing fee</span><strong>0.0006 ETH</strong></div><div className="fee-line"><span>Creator fee share</span><strong className="green">0.6%</strong></div></div></aside></div>
+    </form><aside><div className="panel fee-summary"><div className="summary-icon"><Plus size={24} /></div><h2>Create a market</h2><p>No liquidity deposit required.</p><div className="fee-line"><span>Listing fee</span><strong>0.0006 ETH</strong></div></div></aside></div>
   </div>;
 }

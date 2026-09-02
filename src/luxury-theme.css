@@ -50,7 +50,9 @@ nav a.active:after { background: var(--champagne); height: 1px; }
 .create-link { color: var(--ink); }
 .create-link:hover { color: var(--accent); }
 .shot-buy { min-height: 38px; padding: 9px 14px; border-radius: 5px; background: var(--accent); color: var(--surface); box-shadow: 0 5px 16px rgba(110, 31, 42, .14); font-size: 11px; letter-spacing: .02em; }
-.shot-buy:hover { background: var(--accent-hover); color: var(--surface); transform: translateY(-1px); }
+a.shot-buy:hover,
+button.shot-buy:hover:not(:disabled) { background: var(--accent-hover); color: var(--surface); transform: translateY(-1px); }
+button.shot-buy:disabled { opacity: .46; cursor: not-allowed; box-shadow: none; }
 
 .button { border-radius: 6px; }
 .button.primary { background: var(--accent); color: var(--surface); box-shadow: 0 5px 16px rgba(110, 31, 42, .13); }

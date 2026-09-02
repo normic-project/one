@@ -33,6 +33,8 @@ async function connect(page) {
 
 test('home derives general-purpose categories and safely renders immutable event rules', async ({ page, request }) => {
   await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Buy $SHOT' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Buy $SHOT' })).toBeDisabled();
   await expect(page.getByRole('link', { name: 'Buy $SHOT' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: /A market for/ })).toBeVisible();
   await expect(page.locator('.market-card').first()).toBeVisible();

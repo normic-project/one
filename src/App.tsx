@@ -19,7 +19,10 @@ export default function App() {
   const location = useLocation();
   return <><header className="header"><div className="header-inner"><Logo /><nav aria-label="Main navigation">
     <NavLink to="/" end><Compass size={17} />Explore</NavLink><NavLink to="/portfolio"><Layers3 size={17} />Portfolio</NavLink><NavLink to="/creator"><BarChart3 size={17} />Creator studio</NavLink></nav>
-    <div className="header-actions">{SHOT_BUY_URL && <a className="button shot-buy" href={SHOT_BUY_URL} target="_blank" rel="noreferrer">Buy $SHOT <ArrowUpRight size={14} /></a>}<Link className="create-link" to="/create"><Plus size={17} />Create market</Link><WalletButton /></div></div></header>
+    <div className="header-actions">{SHOT_BUY_URL
+      ? <a className="button shot-buy" href={SHOT_BUY_URL} target="_blank" rel="noopener noreferrer">Buy $SHOT <ArrowUpRight size={14} /></a>
+      : <button className="button shot-buy" type="button" disabled>Buy $SHOT <ArrowUpRight size={14} /></button>}
+      <Link className="create-link" to="/create"><Plus size={17} />Create market</Link><WalletButton /></div></div></header>
     <main key={location.pathname} className="main"><Routes><Route path="/" element={<Home />} /><Route path="/market/:address" element={<MarketPage />} />
       <Route path="/create" element={<CreatePage />} /><Route path="/portfolio" element={<PortfolioPage />} /><Route path="/creator" element={<CreatorPage />} />
       <Route path="*" element={<EmptyState title="This page is off the board." action={<Link className="button primary" to="/">Explore markets</Link>}>The page you’re looking for doesn’t exist.</EmptyState>} /></Routes></main>
